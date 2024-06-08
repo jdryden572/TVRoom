@@ -2,7 +2,13 @@
 {
     public static class Roles
     {
-        public static string Administrator { get; } = "Admin";
-        public static string Viewer { get; } = "Viewer";
+        public const string Administrator = "Admin";
+        public const string Viewer = "Viewer";
+    }
+
+    public static class Policies
+    {
+        public const string RequireAdministrator = "RequireAdministrator";
+        public const string RequireViewer = "RequireViewer";
     }
 }

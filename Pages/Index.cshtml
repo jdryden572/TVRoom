@@ -1,10 +1,28 @@
 ﻿@page
+@using LivingRoom.Broadcast
 @model IndexModel
 @{
     ViewData["Title"] = "Living Room";
 }
 
-<h1>This is the body!</h1>
-<p>You are: @User.Identity?.Name</p>
+<div class="main-video">
+    @if (Model.CurrentBroadcast is BroadcastInfo info)
+    {
+        <video class="video-js" controls data-setup="{}">
+            <source src="streams/@info.SessionId/live.m3u8" type="application/x-mpegURL" />
+        </video>
+    }
+    else
+    {
+        <div class="nothing-playing">Nothing is playing right now. Check back later!</div>
+    }
+</div>
 
 
+@section Styles {
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+}
+
+@section Scripts {
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+}

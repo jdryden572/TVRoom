@@ -14,7 +14,7 @@ export default defineConfig({
         assetsDir: '',
         rollupOptions: {
             input: [
-                'src/root.css',
+                'src/root.js',
                 'src/control-panel.js',
             ],
             output: {
