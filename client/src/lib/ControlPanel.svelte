@@ -1,13 +1,14 @@
-<script>
+<script lang="ts">
     import 'video.js/dist/video-js.css';
-    import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+    import { HubConnectionBuilder, LogLevel, type IStreamResult, type IStreamSubscriber, type ISubscription } from '@microsoft/signalr';
     import { tick } from 'svelte';
     import videojs from 'video.js';
+    import type Player from 'video.js/dist/types/player';
 
-    let debugMessages = [];
-    let activeSession;
-    let videoElement;
-    let player;
+    let debugMessages: string[] = [];
+    let activeSession: { sessionId: string } | undefined;
+    let videoElement: HTMLElement;
+    let player: Player;
 
     const connection = new HubConnectionBuilder()
         .withUrl("/controlPanelHub")
@@ -74,13 +75,13 @@
         player = videojs(videoElement, {
             controls: true,
             sources: [{ 
-                src: `streams/${activeSession.sessionId}/live.m3u8`, 
+                src: `streams/${activeSession?.sessionId}/live.m3u8`, 
                 type: 'application/x-mpegURL' 
             }]
         });
     }
 
-    let debugSubscription;
+    let debugSubscription : ISubscription<any> | undefined;
     function subscribeToDebugOutput() {
         if (!debugSubscription) {
             debugMessages = [];
@@ -93,8 +94,8 @@
         }
     }
 
-    let messagesElement;
-    async function addDebugMessage(msg) {
+    let messagesElement: HTMLElement;
+    async function addDebugMessage(msg: string) {
         const alreadyScrolledToBottom = messagesElement.scrollHeight - messagesElement.scrollTop - messagesElement.clientHeight < 1;
         
         debugMessages.push(msg); 
