@@ -1,97 +1,67 @@
 <script lang="ts">
     import 'video.js/dist/video-js.css';
-    import { HubConnectionBuilder, LogLevel, type IStreamResult, type IStreamSubscriber, type ISubscription } from '@microsoft/signalr';
+    import { HubConnectionBuilder, LogLevel, type ISubscription } from '@microsoft/signalr';
     import { tick } from 'svelte';
     import videojs from 'video.js';
     import type Player from 'video.js/dist/types/player';
+    import { ControlPanelClient, type BroadcastInfo, type TranscodeOptions } from './controlPanelClient';
+
+    const client = new ControlPanelClient();
+    const { currentBroadcast, broadcastReady } = client;
+
+    client.connect();
 
     let debugMessages: string[] = [];
-    let activeSession: { sessionId: string } | undefined;
+    
     let videoElement: HTMLElement;
     let player: Player;
 
-    const connection = new HubConnectionBuilder()
-        .withUrl("/controlPanelHub")
-        .configureLogging(LogLevel.Debug)
-        .build();
-
-    connection.on('BroadcastStarted', session => {
-        activeSession = session;
-        showVideo();
-        subscribeToDebugOutput();
-    });
-    connection.on('BroadcastStopped', () => {
-        activeSession = undefined;
-        player?.options({sources: []});
-    });
-
-    startConnection();
-
-    async function startConnection() {
-        try {
-            await connection.start();
-            activeSession = await connection.invoke("GetCurrentSession");
-            if (activeSession) {
-                showVideo();
-                subscribeToDebugOutput();
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    }
-
     async function startBroadcast() {
-        const channelInfo = {
-            guideNumber: 'CBS',
-            guideName: 'CBS',
-            url: 'http://hdhr-106903ac.local:5004/auto/v3.1'
-        };
-        const transcodeOptions = {
+        const guideNumber = '3.1';
+        const transcodeOptons: TranscodeOptions = {
             bitRateKbps: 8000,
-            outputVideoOptions: '-vf yadif -c:v libx264 -g 30'
+            outputVideoOptions: '-vf yadif -c:v libx264 -g 30',
         };
 
-        try {
-            await connection.invoke('StartBroadcast', channelInfo, transcodeOptions);
-            subscribeToDebugOutput();
-        }
-        catch (err) {
-            console.error(err);
-        }
+        client.startBroadcast(guideNumber, transcodeOptons);
     }
 
-    async function stopBroadcast() {
-        try {
-            await connection.invoke('StopBroadcast');
-            activeSession = undefined;
-        }
-        catch (err) {
-            console.error(err);
-        }
-    }
-
-    async function showVideo() {
-        await tick();
-        player = videojs(videoElement, {
-            controls: true,
-            sources: [{ 
-                src: `streams/${activeSession?.sessionId}/live.m3u8`, 
-                type: 'application/x-mpegURL' 
-            }]
-        });
-    }
+    $: onBroadcastChange($currentBroadcast);
 
     let debugSubscription : ISubscription<any> | undefined;
-    function subscribeToDebugOutput() {
-        if (!debugSubscription) {
-            debugMessages = [];
-            debugSubscription = connection.stream('GetDebugOutput')
-                .subscribe({
-                    next: addDebugMessage,
-                    complete: () => debugSubscription = undefined,
-                    error: console.error,
-                });
+    function onBroadcastChange(activeBroadcastSession: BroadcastInfo | undefined) {
+        if (!activeBroadcastSession) {
+            console.log('broadcast stopped');
+            debugSubscription?.dispose();
+            debugSubscription = undefined;
+        } else {
+            if (!debugSubscription) {
+                debugSubscription = client.subscribeToDebugOutput(addDebugMessage);
+                console.log('broadcast started: ' + activeBroadcastSession.sessionId);
+            }
         }
+    }
+
+    $: onBroadcastReady($broadcastReady);
+    function onBroadcastReady(activeBroadcastSession: BroadcastInfo | undefined) {
+        if (activeBroadcastSession) {
+            console.log('ready');
+            showVideo(activeBroadcastSession.sessionId);
+        } else {
+            console.log('not ready');
+            player?.dispose();
+        }
+    }
+
+    function showVideo(sessionId: string) {
+        player = videojs(videoElement, {
+            controls: true,
+            restoreEl: true,
+            sources: [{ 
+                src: `streams/${sessionId}/live.m3u8`, 
+                type: 'application/x-mpegURL'
+            }]
+        });
     }
 
     let messagesElement: HTMLElement;
@@ -111,10 +81,10 @@
 <!-- svelte-ignore a11y-media-has-caption -->
 <video class="video-js" bind:this={videoElement} width="400" height="300"></video>
     
-<pre>{JSON.stringify(activeSession, null, 2)}</pre>
+<pre>{JSON.stringify($currentBroadcast, null, 2)}</pre>
 
 <button on:click={startBroadcast}>Start broadcast</button>
-<button on:click={stopBroadcast}>Stop broadcast</button>
+<button on:click={() => client.stopBroadcast()}>Stop broadcast</button>
 
 <ul class="debug-output" bind:this={messagesElement}>
     {#each debugMessages as msg}

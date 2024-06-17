@@ -9,6 +9,7 @@ namespace LivingRoom.Broadcast
     public interface IControlPanelClient
     {
         Task BroadcastStarted(BroadcastInfo info);
+        Task BroadcastReady(BroadcastInfo info);
         Task BroadcastStopped();
     }
 
@@ -16,13 +17,20 @@ namespace LivingRoom.Broadcast
     public class ControlPanelHub : Hub<IControlPanelClient>
     {
         private readonly BroadcastManager _broadcastManager;
+        private readonly TunerClient _tunerClient;
 
-        public ControlPanelHub(BroadcastManager broadcastManager) => 
-            _broadcastManager = broadcastManager;
+        public ControlPanelHub(BroadcastManager broadcastManager, TunerClient tunerClient) => 
+            (_broadcastManager, _tunerClient) = (broadcastManager, tunerClient);
 
-        public BroadcastInfo StartBroadcast(ChannelInfo channelInfo, TranscodeOptions transcodeOptions)
+        public async Task<BroadcastInfo> StartBroadcast(string guideNumber, TranscodeOptions transcodeOptions)
         {
-            return _broadcastManager.StartSession(channelInfo, transcodeOptions);
+            var channel = await _tunerClient.GetChannelAsync(guideNumber);
+            if (channel is null)
+            {
+                throw new HubException($"Channel with guideNumber='{guideNumber}' not found");
+            }
+
+            return await _broadcastManager.StartSession(channel, transcodeOptions);
         }
 
         public async Task StopBroadcast()

@@ -26,7 +26,7 @@ namespace LivingRoom.Broadcast
         public BroadcastInfo? NowPlaying => 
             _currentSession?.IsReady == true ? _currentSession.BroadcastInfo : null;
 
-        public BroadcastInfo StartSession(ChannelInfo channelInfo, TranscodeOptions transcodeOptions)
+        public async Task<BroadcastInfo> StartSession(ChannelInfo channelInfo, TranscodeOptions transcodeOptions)
         {
             if  (_currentSession is not null)
             {
@@ -35,6 +35,7 @@ namespace LivingRoom.Broadcast
 
             var session = _sessionFactory.CreateBroadcast(channelInfo, transcodeOptions);
             _currentSession = session;
+            await _controlPanelHub.Clients.All.BroadcastStarted(session.BroadcastInfo);
 
             // Start session on background task and notify clients when it is ready
             _ = Task.Run(async () =>
@@ -42,7 +43,7 @@ namespace LivingRoom.Broadcast
                 try
                 {
                     await session.StartAndWaitForReadyAsync();
-                    await _controlPanelHub.Clients.All.BroadcastStarted(session.BroadcastInfo);
+                    await _controlPanelHub.Clients.All.BroadcastReady(session.BroadcastInfo);
                 }
                 catch (Exception ex)
                 {
