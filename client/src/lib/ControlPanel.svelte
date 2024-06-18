@@ -5,25 +5,27 @@
     import videojs from 'video.js';
     import type Player from 'video.js/dist/types/player';
     import { ControlPanelClient, type BroadcastInfo, type TranscodeOptions } from './controlPanelClient';
+    import ChannelSelector from './ChannelSelector.svelte';
 
     const client = new ControlPanelClient();
     const { currentBroadcast, broadcastReady } = client;
 
     client.connect();
 
+    let selectedChannel: string | undefined;
+    let bitRateKbps: number = 8000;
+    let outputVideoOptions: string = '-vf yadif -c:v libx264 -g 30';
     let debugMessages: string[] = [];
-    
     let videoElement: HTMLElement;
     let player: Player;
 
     async function startBroadcast() {
-        const guideNumber = '3.1';
-        const transcodeOptons: TranscodeOptions = {
-            bitRateKbps: 8000,
-            outputVideoOptions: '-vf yadif -c:v libx264 -g 30',
+        const transcodeOptons = {
+            bitRateKbps,
+            outputVideoOptions,
         };
 
-        client.startBroadcast(guideNumber, transcodeOptons);
+        client.startBroadcast(selectedChannel ?? '', transcodeOptons);
     }
 
     $: onBroadcastChange($currentBroadcast);
@@ -82,9 +84,14 @@
 <video class="video-js" bind:this={videoElement} width="400" height="300"></video>
     
 <pre>{JSON.stringify($currentBroadcast, null, 2)}</pre>
+<ChannelSelector bind:selected={selectedChannel} />
 
 <button on:click={startBroadcast}>Start broadcast</button>
 <button on:click={() => client.stopBroadcast()}>Stop broadcast</button>
+<div class="transcode-options">
+    <input bind:value={bitRateKbps} type="number" />
+    <input bind:value={outputVideoOptions} type="text" />
+</div>
 
 <ul class="debug-output" bind:this={messagesElement}>
     {#each debugMessages as msg}
@@ -93,6 +100,9 @@
 </ul>
 
 <style>
+    .transcode-options {
+        margin: 1em;
+    }
     .debug-output {
         font-family: consolas;
         font-size: 12px;
