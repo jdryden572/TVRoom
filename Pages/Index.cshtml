@@ -37,17 +37,17 @@
             const options = {
                 fluid: true, 
                 techOrder: ["chromecast", "html5"], 
-                chromecast: {
-                    modifyLoadRequestFn: loadRequest => { // HLS support
-                        console.log('modifyLoadRequestFn');
-                        loadRequest.media.hlsSegmentFormat = 'fmp4';
-                        loadRequest.media.hlsVideoSegmentFormat = 'fmp4';
-                        return loadRequest;
-                    }
-                },
+                // chromecast: {
+                //     modifyLoadRequestFn: loadRequest => { // HLS support
+                //         console.log('modifyLoadRequestFn');
+                //         loadRequest.media.hlsSegmentFormat = 'fmp4';
+                //         loadRequest.media.hlsVideoSegmentFormat = 'fmp4';
+                //         return loadRequest;
+                //     }
+                // },
                 plugins: { 
                     chromecast: {
-                        receiverAppID: "9043DB46"
+                        //receiverAppID: "9043DB46"
                     } 
                 }
             };
