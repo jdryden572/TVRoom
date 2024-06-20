@@ -8,8 +8,9 @@
 <div class="main-video">
     @if (Model.CurrentBroadcast is BroadcastInfo info)
     {
+        
         <video id="stream" class="video-js vjs-default-skin" controls>
-            <source src="streams/@info.SessionId/live.m3u8" type="application/x-mpegURL" />
+            <source src="@Request.Scheme://@Request.Host/streams/@info.SessionId/live.m3u8" type="application/x-mpegURL" />
         </video>
     }
     else
