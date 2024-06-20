@@ -14,6 +14,7 @@
 
     let selectedChannel: string | undefined;
     let bitRateKbps: number = 8000;
+    let inputVideoOptions: string = '';
     let outputVideoOptions: string = '-vf yadif -c:v libx264 -g 30';
     let debugMessages: string[] = [];
     let videoElement: HTMLElement;
@@ -22,6 +23,7 @@
     async function startBroadcast() {
         const transcodeOptons = {
             bitRateKbps,
+            inputVideoOptions,
             outputVideoOptions,
         };
 
@@ -90,6 +92,7 @@
 <button on:click={() => client.stopBroadcast()}>Stop broadcast</button>
 <div class="transcode-options">
     <input bind:value={bitRateKbps} type="number" />
+    <input bind:value={inputVideoOptions} type="text" />
     <input bind:value={outputVideoOptions} type="text" />
 </div>
 

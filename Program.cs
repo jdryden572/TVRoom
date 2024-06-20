@@ -1,6 +1,7 @@
 using LivingRoom.Authorization;
 using LivingRoom.Broadcast;
 using LivingRoom.Tuner;
+using Microsoft.AspNetCore.HttpOverrides;
 using Vite.AspNetCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,23 @@ builder.Services.AddLivingRoomAuthorizationServices();
 builder.Services.AddLivingRoomBroadcastServices(builder.Configuration);
 builder.Services.AddTunerServices(builder.Configuration);
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+    options.KnownProxies.Clear();
+    options.KnownNetworks.Clear();
+});
+
+builder.Services.AddCors(options =>
+    options.AddPolicy("AllowAll", builder =>
+        builder
+            .AllowAnyHeader()
+            .AllowAnyOrigin()
+            .AllowAnyMethod()));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -23,6 +41,7 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     // The default HSTS value is 30 days.
     app.UseHsts();
+    app.UseForwardedHeaders();
 }
 
 if (app.Environment.IsDevelopment())
@@ -34,7 +53,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseCors();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();

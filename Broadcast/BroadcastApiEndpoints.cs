@@ -6,7 +6,7 @@ namespace LivingRoom.Broadcast
     {
         public static IEndpointRouteBuilder MapBroadcastApiEndpoints(this IEndpointRouteBuilder app, IConfiguration configuration)
         {
-            app.MapGet("/streams/{sessionId}/{*file}", (string sessionId, string file, BroadcastManager broadcastManager) =>
+            var getStream = app.MapGet("/streams/{sessionId}/{*file}", (string sessionId, string file, BroadcastManager broadcastManager) =>
             {
                 var session = broadcastManager.CurrentSession;
                 if (session is null || session.BroadcastInfo.SessionId != sessionId)
@@ -24,6 +24,10 @@ namespace LivingRoom.Broadcast
                 string? contentType = extension == ".m3u8" ? "audio/mpegurl" : null;
                 return Results.File(filePath, contentType);
             });
+
+            getStream
+                .RequireCors("AllowAll")
+                .AllowAnonymous();
 
             return app;
         }

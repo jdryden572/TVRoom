@@ -7,6 +7,7 @@ interface BroadcastInfo {
 
 interface TranscodeOptions {
     bitRateKbps: number,
+    inputVideoOptions: string,
     outputVideoOptions: string,
 }
 
