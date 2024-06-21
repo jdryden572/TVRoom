@@ -14,8 +14,8 @@
 
     let selectedChannel: string | undefined;
     let bitRateKbps: number = 8000;
-    let inputVideoOptions: string = '-vaapi_device /dev/dri/renderD128';
-    let outputVideoOptions: string = '-ss 3 -c:v h264_vaapi -vf "format=nv12|vaapi,hwupload" -g 30';
+    let inputVideoOptions: string = '-vaapi_device /dev/dri/renderD128 -f mpegts -hwaccel vaapi -hwaccel_output_format vaapi';
+    let outputVideoOptions: string = '-ss 3 -c:v h264_vaapi -vf "format=nv12|vaapi,deinterlace_vaapi" -g 30';
     let debugMessages: string[] = [];
     let videoElement: HTMLElement;
     let player: Player;
