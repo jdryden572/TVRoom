@@ -24,6 +24,7 @@ namespace LivingRoom.Broadcast
             HlsListSize = hlsOptions.HlsListSize;
             HlsDeleteSegments = hlsOptions.HlsDeleteSegments;
             HlsPlaylistName = hlsOptions.HlsPlaylistName;
+            HlsPlaylistReadyCount = hlsOptions.HlsPlaylistReadyCount;
             ApplicationStopping = appLifetime.ApplicationStopping;
         }
 
@@ -33,6 +34,7 @@ namespace LivingRoom.Broadcast
         public int HlsListSize { get; }
         public bool HlsDeleteSegments { get; }
         public string HlsPlaylistName { get; }
+        public int HlsPlaylistReadyCount { get; }
         public CancellationToken ApplicationStopping { get; }
     }
 
@@ -46,10 +48,12 @@ namespace LivingRoom.Broadcast
 
         public int HlsTime { get; init; } = 2;
 
-        public int HlsListSize { get; init; } = 3;
+        public int HlsListSize { get; init; } = 5;
 
         public bool HlsDeleteSegments { get; init; } = true;
 
         public string HlsPlaylistName { get; init; } = "live.m3u8";
+
+        public int HlsPlaylistReadyCount { get; init; } = 2;
     }
 }

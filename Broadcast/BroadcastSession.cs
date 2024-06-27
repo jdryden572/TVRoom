@@ -35,7 +35,7 @@ namespace LivingRoom.Broadcast
 
         public async Task StartAndWaitForReadyAsync()
         {
-            var waitForTranscodeReady = new WaitForTranscodeReadyObserver(_transcodeConfig.HlsListSize);
+            var waitForTranscodeReady = new WaitForTranscodeReadyObserver(_transcodeConfig.HlsPlaylistReadyCount);
             using (_ffmpegProcess.Subscribe(waitForTranscodeReady))
             {
                 _ffmpegProcess.Start();
