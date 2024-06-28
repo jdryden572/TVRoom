@@ -3,6 +3,15 @@ import { writable, type Readable, type Writable, readonly } from "svelte/store";
 
 interface BroadcastInfo {
     sessionId: string,
+    channelInfo: ChannelInfo,
+    fFmpegArguments: string,
+    startedAt: string,
+}
+
+interface ChannelInfo {
+    guideNumber: string,
+    guideName: string,
+    URL: string,
 }
 
 interface TranscodeOptions {
@@ -37,6 +46,9 @@ class ControlPanelClient {
             await this.connection.start();
             const activeBroadcast = await this.connection.invoke('GetCurrentSession') as BroadcastInfo | undefined;
             this.currentBroadcastWritable.set(activeBroadcast);
+            if (activeBroadcast) {
+                this.broadcastReadyWritable.set(activeBroadcast);
+            }
         } catch (err) {
             console.error(err);
             throw err;

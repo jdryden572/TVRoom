@@ -18,7 +18,6 @@ namespace LivingRoom.Broadcast
         {
             // Generate unique session and save broadcast info (usable to watch the stream)
             var sessionId = GenerateSessionId();
-            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId);
 
             // Create a directory to hold the transcoded HLS files
             var folder = _transcodeConfig.BaseTranscodeDirectory.CreateSubdirectory(sessionId);
@@ -26,6 +25,7 @@ namespace LivingRoom.Broadcast
             // Start ffmpeg process
             var logger = _loggerFactory.CreateLogger($"Broadcast-{sessionId}");
             var arguments = BuildFFmpegArguments(channelInfo.Url, transcodeOptions, folder);
+            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, arguments);
             var process = new FFmpegProcess(_transcodeConfig.FFmpeg.FullName, arguments, logger);
 
             return new BroadcastSession(broadcastInfo, folder, process, _transcodeConfig, logger);

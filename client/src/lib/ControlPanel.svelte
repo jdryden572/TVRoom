@@ -1,11 +1,14 @@
 <script lang="ts">
     import 'video.js/dist/video-js.css';
-    import { HubConnectionBuilder, LogLevel, type ISubscription } from '@microsoft/signalr';
     import { tick } from 'svelte';
     import videojs from 'video.js';
     import type Player from 'video.js/dist/types/player';
-    import { ControlPanelClient, type BroadcastInfo, type TranscodeOptions } from './controlPanelClient';
+    import { ControlPanelClient, type BroadcastInfo } from './controlPanelClient';
     import ChannelSelector from './ChannelSelector.svelte';
+    import TextArea from './TextArea.svelte';
+    import LiveNow from './LiveNow.svelte';
+    import DebugView from './DebugView.svelte';
+    import Loading from './Loading.svelte';
 
     const client = new ControlPanelClient();
     const { currentBroadcast, broadcastReady } = client;
@@ -14,36 +17,18 @@
 
     let selectedChannel: string | undefined;
     let bitRateKbps: number = 8000;
-    let inputVideoOptions: string = '-vaapi_device /dev/dri/renderD128 -f mpegts -hwaccel vaapi -hwaccel_output_format vaapi';
-    let outputVideoOptions: string = '-ss 3 -c:v h264_vaapi -vf "format=nv12|vaapi,deinterlace_vaapi" -g 30';
-    let debugMessages: string[] = [];
-    let videoElement: HTMLElement;
+    let inputVideoOptions: string = '';
+    let outputVideoOptions: string = '-ss 3 \n-c:v libx264 \n-preset ultrafast\n-g 30';
     let player: Player;
 
     async function startBroadcast() {
         const transcodeOptons = {
             bitRateKbps,
-            inputVideoOptions,
-            outputVideoOptions,
+            inputVideoOptions: inputVideoOptions.replaceAll('\n', ' '),
+            outputVideoOptions: outputVideoOptions.replaceAll('\n', ' '),
         };
 
         client.startBroadcast(selectedChannel ?? '', transcodeOptons);
-    }
-
-    $: onBroadcastChange($currentBroadcast);
-
-    let debugSubscription : ISubscription<any> | undefined;
-    function onBroadcastChange(activeBroadcastSession: BroadcastInfo | undefined) {
-        if (!activeBroadcastSession) {
-            console.log('broadcast stopped');
-            debugSubscription?.dispose();
-            debugSubscription = undefined;
-        } else {
-            if (!debugSubscription) {
-                debugSubscription = client.subscribeToDebugOutput(addDebugMessage);
-                console.log('broadcast started: ' + activeBroadcastSession.sessionId);
-            }
-        }
     }
 
     $: onBroadcastReady($broadcastReady);
@@ -57,9 +42,12 @@
         }
     }
 
-    function showVideo(sessionId: string) {
-        player = videojs(videoElement, {
+    async function showVideo(sessionId: string) {
+        await tick();
+        console.log(document.getElementById('video'));
+        player = videojs('video', {
             controls: true,
+            fluid: true,
             restoreEl: true,
             sources: [{ 
                 src: `streams/${sessionId}/live.m3u8`, 
@@ -68,53 +56,152 @@
         });
     }
 
-    let messagesElement: HTMLElement;
-    async function addDebugMessage(msg: string) {
-        const alreadyScrolledToBottom = messagesElement.scrollHeight - messagesElement.scrollTop - messagesElement.clientHeight < 1;
-        
-        debugMessages.push(msg); 
-        debugMessages = debugMessages; 
-
-        if (alreadyScrolledToBottom) {
-            await tick();
-            messagesElement.scrollTop = messagesElement.scrollHeight;
-        }
-    }
 </script>
 
-<!-- svelte-ignore a11y-media-has-caption -->
-<video class="video-js" bind:this={videoElement} width="400" height="300"></video>
+<div class="main">
     
-<pre>{JSON.stringify($currentBroadcast, null, 2)}</pre>
-<ChannelSelector bind:selected={selectedChannel} />
-
-<button on:click={startBroadcast}>Start broadcast</button>
-<button on:click={() => client.stopBroadcast()}>Stop broadcast</button>
-<div class="transcode-options">
-    <input bind:value={bitRateKbps} type="number" />
-    <input bind:value={inputVideoOptions} type="text" />
-    <input bind:value={outputVideoOptions} type="text" />
+    {#if !$currentBroadcast}
+        <div class="configuration">
+            <ChannelSelector bind:selected={selectedChannel} />
+            <!-- svelte-ignore a11y-label-has-associated-control -->
+            <label>
+                Input params
+                <TextArea bind:value={inputVideoOptions} />
+            </label>
+            <!-- svelte-ignore a11y-label-has-associated-control -->
+            <label>
+                Output params
+                <TextArea bind:value={outputVideoOptions} />
+            </label>
+            <button class="start-broadcast" on:click={startBroadcast}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M9.6,8l6.9,4l-6.9,4Z"></path>
+                    <circle cx="12" cy="12" r="8" stroke-width="1.5" fill="none" />
+                </svg>
+                <span>Start broadcast</span>
+            </button>
+        </div>
+    {:else}
+        <div class="active-broadcast">
+            <div class="video-container">
+                {#if !player || player.isDisposed()} 
+                    <div class="loading">
+                        <Loading />
+                    </div>
+                {/if}
+                <!-- svelte-ignore a11y-media-has-caption -->
+                <video id="video" class="video-js"></video>
+            </div>
+            <div class="now-playing">
+                <LiveNow currentBroadcast={$currentBroadcast} />
+                <button class="stop-broadcast" on:click={() => client.stopBroadcast()}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <rect x="9" y="9" width="6" height="6" />
+                        <circle cx="12" cy="12" r="8" stroke-width="1.5" fill="none" />
+                    </svg>
+                    <span>Stop broadcast</span>
+                </button>
+            </div>
+        </div>
+    {/if}
 </div>
 
-<ul class="debug-output" bind:this={messagesElement}>
-    {#each debugMessages as msg}
-        <li>{msg}</li>
-    {/each}
-</ul>
+<!-- svelte-ignore a11y-media-has-caption -->
+<!-- <video class="video-js" bind:this={videoElement} width="400" height="300"></video> -->
+
+<hr/>
+<DebugView {client} />
 
 <style>
-    .transcode-options {
-        margin: 1em;
+    button {
+        font-size: 16px;
+        border: none;
+        border-radius: 0.25em;
+        cursor: pointer;
+        height: 2.5em;
+        padding-inline: 1em;
     }
-    .debug-output {
-        font-family: consolas;
-        font-size: 12px;
-        list-style-type: none;
-        padding-inline-start: 0;
-        height: 400px;
-        overflow: auto;
+
+    button:hover {
+        filter: brightness(1.1);
     }
-    .debug-output li:hover {
-        background-color: rgba(255, 255, 255, 0.096);
+
+    button svg {
+        height: 2em;
+        stroke: currentColor;
+        fill: currentColor;
+    }
+    
+    .start-broadcast {
+        color: white;
+        background-color: green;
+        padding-inline: 0.5em 1em;
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        justify-self: start;
+    }
+
+    .active-broadcast {
+        display: grid;
+        grid-template-columns: auto minmax(100px, 600px);
+        gap: 1em;
+        padding: 1em;
+    }
+
+    .now-playing {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .loading {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+    }
+
+    @media (max-width: 600px) {
+        .active-broadcast {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        .now-playing {
+            padding: 1em;
+        }
+    }
+
+    .video-container {
+        grid-column: 2;
+        grid-row: 1;
+        position: relative;
+        background-color: black;
+        aspect-ratio: 16/9;
+    }
+
+    .stop-broadcast {
+        color: white;
+        background-color: rgb(136, 0, 0);
+        padding-inline: 0.5em 1em;
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        margin-top: 1em;
+    }
+    
+    .configuration {
+        padding: 1em;
+        display: grid;
+        gap: 2em;
+    }
+
+    .configuration label {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
     }
 </style>

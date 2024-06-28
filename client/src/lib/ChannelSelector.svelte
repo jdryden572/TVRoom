@@ -23,3 +23,13 @@
         {/each}
     {/await}
 </select>
+
+<style>
+    select {
+        color: rgb(168, 168, 168);
+        font-size: 16px;
+        padding: 0.5em;
+        background-color: rgb(28, 33, 44);
+        border: none;
+    }
+</style>
