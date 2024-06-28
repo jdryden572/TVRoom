@@ -17,8 +17,24 @@
 
     let selectedChannel: string | undefined;
     let bitRateKbps: number = 8000;
-    let inputVideoOptions: string = '';
-    let outputVideoOptions: string = '-ss 3 \n-c:v libx264 \n-preset ultrafast\n-g 30';
+    let inputVideoOptions: string = 
+`-qsv_device /dev/dri/renderD128 
+-f mpegts -hwaccel qsv 
+-hwaccel_output_format qsv 
+-extra_hw_frames 40`;
+
+    let outputVideoOptions: string = 
+`-ss 3 
+-c:v h264_qsv -preset slow -profile baseline 
+-vf "deinterlace_qsv" -g 30 
+-b:v 4M -maxrate 8M 
+-bufsize 16M -rc_init_occupancy 8M 
+-extbrc 1 -look_ahead_depth 40 
+-b_strategy 1 -bf 7 -refs 5 
+-adaptive_i 1 -adaptive_b 1 
+-strict -1 -bitrate_limit 0 
+-async_depth 1`;
+
     let player: Player;
 
     async function startBroadcast() {
