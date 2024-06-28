@@ -26,7 +26,7 @@
     let outputVideoOptions: string = 
 `-ss 3 
 -c:v h264_qsv -profile:v baseline -preset slow 
--vf "deinterlace_qsv" -g 30 
+-vf "deinterlace_qsv,fps=60" -g 30 
 -b:v 4M -maxrate 8M 
 -bufsize 16M -rc_init_occupancy 8M 
 -extbrc 1 -look_ahead_depth 40 
