@@ -66,7 +66,7 @@
             fluid: true,
             restoreEl: true,
             sources: [{ 
-                src: `streams/${sessionId}/master.m3u8`, 
+                src: `streams/${sessionId}/live.m3u8`, 
                 type: 'application/x-mpegURL'
             }]
         });
