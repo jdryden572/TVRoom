@@ -43,7 +43,7 @@ namespace LivingRoom.Broadcast
             var hlsSettings = $"-f hls -hls_time {_transcodeConfig.HlsTime} -hls_list_size {_transcodeConfig.HlsListSize} {deleteSegments}";
 
             var playlist = Path.Join(transcodeDirectory.FullName, _transcodeConfig.HlsPlaylistName);
-            return $"-y {options.InputVideoOptions} -i {input} -c:a aac -ac 2 {options.OutputVideoOptions} {hlsSettings} {playlist}";
+            return $"-y {options.InputVideoOptions} -i {input} -c:a aac -ac 2 {options.OutputVideoOptions} {hlsSettings} -master_pl_name master.m3u8 {playlist}";
         }
     }
 }
