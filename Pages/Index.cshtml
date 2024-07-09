@@ -37,16 +37,18 @@
                 fluid: true, 
                 techOrder: ["chromecast", "html5"], 
                 plugins: { 
-                    chromecast: {
-                        receiverAppID: '9043DB46',
-                        requestTitleFn: () => "@Model.CurrentBroadcast?.ChannelInfo.GuideName",
-                        requestSubtitleFn: () => "@Model.CurrentBroadcast?.ChannelInfo.GuideNumber"
-                    },
                     landscapeFullscreen: {
                         enterOnRotate: false,
                         exitOnRotate: false,
                         alwaysInLandscapeMode: true,
+                    },
+                    chromecast: {
+                        receiverAppID: '9043DB46',
                     }
+                },
+                chromecast: {
+                    requestTitleFn: () => "@Model.CurrentBroadcast?.ChannelInfo.GuideName",
+                    requestSubtitleFn: () => "@Model.CurrentBroadcast?.ChannelInfo.GuideNumber"
                 }
             };
 
