@@ -23,6 +23,42 @@
 @section Styles {
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@silvermine/videojs-chromecast@1.5.0/dist/silvermine-videojs-chromecast.min.css">
+    <style>
+        .video-js .vjs-control-bar {
+            height: 4em;
+        }
+        .vjs-button > .vjs-icon-placeholder::before {
+            font-size: 2.5em;
+        }
+
+        .video-js .vjs-live-control,
+        .video-js .vjs-volume-panel {
+            align-items: center;
+        }
+
+        .video-js .vjs-live-control {
+            margin-left: 1.5em;
+        }
+
+        .vjs-menu-button-popup .vjs-menu {
+            bottom: 100%;
+            margin-bottom: 0;
+        }
+
+        .vjs-menu-button-popup .vjs-menu .vjs-menu-content {
+            bottom: 0;
+        }
+
+        .vjs-chromecast-button .vjs-icon-placeholder {
+            width: 24px;
+            height: 24px;
+        }
+
+        .video-js .vjs-control.vjs-chromecast-button {
+            display: flex;
+            align-items: center;
+        }
+    </style>
 }
 
 @section Scripts {
@@ -44,6 +80,7 @@
                     },
                     chromecast: {
                         receiverAppID: '9043DB46',
+                        buttonPositionIndex: -4
                     }
                 },
                 chromecast: {
