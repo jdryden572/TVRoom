@@ -27,6 +27,7 @@
 
 @section Scripts {
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/videojs-landscape-fullscreen@@12.2.0/dist/videojs-landscape-fullscreen.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@@silvermine/videojs-chromecast@1.5.0/dist/silvermine-videojs-chromecast.min.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
     <script>
@@ -36,7 +37,14 @@
                 fluid: true, 
                 techOrder: ["chromecast", "html5"], 
                 plugins: { 
-                    chromecast: {} 
+                    chromecast: {
+                        receiverAppID: '9043DB46'
+                    },
+                    landscapeFullscreen: {
+                        enterOnRotate: false,
+                        exitOnRotate: false,
+                        alwaysInLandscapeMode: true,
+                    }
                 }
             };
 
