@@ -39,10 +39,9 @@ namespace LivingRoom.Broadcast
 
         private string BuildFFmpegArguments(string input, TranscodeOptions options, DirectoryInfo transcodeDirectory)
         {
-            string deleteSegments = _transcodeConfig.HlsDeleteSegments ? "-hls_flags delete_segments" : string.Empty;
-            var hlsSettings = $"-f hls -hls_time {_transcodeConfig.HlsTime} -hls_list_size {_transcodeConfig.HlsListSize} {deleteSegments}";
+            var hlsSettings = $"-f hls -hls_time {_transcodeConfig.HlsTime} -hls_list_size {_transcodeConfig.HlsListSize} -hls_flags delete_segments";
 
-            var playlist = Path.Join(transcodeDirectory.FullName, _transcodeConfig.HlsPlaylistName);
+            var playlist = Path.Join(transcodeDirectory.FullName, "live.m3u8");
             return $"-y {options.InputVideoOptions} -i {input} -c:a aac -ac 2 {options.OutputVideoOptions} {hlsSettings} -master_pl_name master.m3u8 {playlist}";
         }
     }
