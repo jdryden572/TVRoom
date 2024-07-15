@@ -14,12 +14,6 @@ interface ChannelInfo {
     URL: string,
 }
 
-interface TranscodeOptions {
-    bitRateKbps: number,
-    inputVideoOptions: string,
-    outputVideoOptions: string,
-}
-
 class ControlPanelClient {
     private readonly connection: HubConnection;
     private readonly currentBroadcastWritable: Writable<BroadcastInfo | undefined> = writable(undefined);
@@ -55,9 +49,19 @@ class ControlPanelClient {
         }
     }
 
-    public async startBroadcast(guideNumber: string, transcodeOptions: TranscodeOptions) : Promise<BroadcastInfo | undefined> {
+    public async getLastChannel() : Promise<ChannelInfo | undefined> {
         try {
-            const broadcastInfo = await this.connection.invoke('StartBroadcast', guideNumber, transcodeOptions) as BroadcastInfo;
+            const channelInfo = await this.connection.invoke('GetLastChannel') as ChannelInfo | undefined;
+            return channelInfo;
+        }
+        catch (err) {
+            console.error(err);
+        }
+    }
+
+    public async startBroadcast(guideNumber: string) : Promise<BroadcastInfo | undefined> {
+        try {
+            const broadcastInfo = await this.connection.invoke('StartBroadcast', guideNumber) as BroadcastInfo;
             this.currentBroadcastWritable.set(broadcastInfo);
             return broadcastInfo;
         }
@@ -88,5 +92,4 @@ class ControlPanelClient {
 export {
     ControlPanelClient,
     type BroadcastInfo,
-    type TranscodeOptions,
 }

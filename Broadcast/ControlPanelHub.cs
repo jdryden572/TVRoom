@@ -22,7 +22,7 @@ namespace LivingRoom.Broadcast
         public ControlPanelHub(BroadcastManager broadcastManager, TunerClient tunerClient) => 
             (_broadcastManager, _tunerClient) = (broadcastManager, tunerClient);
 
-        public async Task<BroadcastInfo> StartBroadcast(string guideNumber, TranscodeOptions transcodeOptions)
+        public async Task<BroadcastInfo> StartBroadcast(string guideNumber)
         {
             var channel = await _tunerClient.GetChannelAsync(guideNumber);
             if (channel is null)
@@ -30,12 +30,17 @@ namespace LivingRoom.Broadcast
                 throw new HubException($"Channel with guideNumber='{guideNumber}' not found");
             }
 
-            return await _broadcastManager.StartSession(channel, transcodeOptions);
+            return await _broadcastManager.StartSession(channel);
         }
 
         public async Task StopBroadcast()
         {
             await _broadcastManager.StopSessionAsync();
+        }
+
+        public async Task<ChannelInfo?> GetLastChannel()
+        {
+            return await _broadcastManager.GetLastChannel();
         }
 
         public BroadcastInfo? GetCurrentSession()

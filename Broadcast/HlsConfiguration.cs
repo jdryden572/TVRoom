@@ -2,9 +2,9 @@
 
 namespace LivingRoom.Broadcast
 {
-    public sealed class TranscodeConfiguration
+    public sealed class HlsConfiguration
     {
-        public TranscodeConfiguration(IOptions<HlsTranscodeOptions> options, IHostApplicationLifetime appLifetime)
+        public HlsConfiguration(IOptions<HlsTranscodeOptions> options, IHostApplicationLifetime appLifetime)
         {
             var hlsOptions = options.Value;
             

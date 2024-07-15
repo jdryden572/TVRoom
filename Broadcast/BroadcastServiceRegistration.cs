@@ -7,8 +7,9 @@
             services.Configure<HlsTranscodeOptions>(configuration.GetSection(HlsTranscodeOptions.SectionName));
 
             return services
-                .AddSingleton<TranscodeConfiguration>()
-                .AddSingleton<BroadcastSessionFactory>()
+                .AddScoped<BroadcastSessionFactory>()
+                .AddScoped<BroadcastHistoryService>()
+                .AddSingleton<HlsConfiguration>()
                 .AddSingleton<BroadcastManager>();
         }
     }

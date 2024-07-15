@@ -5,46 +5,30 @@
     import type Player from 'video.js/dist/types/player';
     import { ControlPanelClient, type BroadcastInfo } from './controlPanelClient';
     import ChannelSelector from './ChannelSelector.svelte';
-    import TextArea from './TextArea.svelte';
     import LiveNow from './LiveNow.svelte';
     import DebugView from './DebugView.svelte';
     import Loading from './Loading.svelte';
+    import TranscodeConfig from './TranscodeConfig.svelte';
 
     const client = new ControlPanelClient();
     const { currentBroadcast, broadcastReady } = client;
 
-    client.connect();
+    startConnection();
+
+    async function startConnection() {
+        await client.connect();
+        const latestChannel = await client.getLastChannel();
+        if (latestChannel) {
+            selectedChannel = latestChannel.guideNumber;
+        }
+    }
 
     let selectedChannel: string | undefined;
-    let bitRateKbps: number = 8000;
-    let inputVideoOptions: string = 
-`-qsv_device /dev/dri/renderD128 
--f mpegts -hwaccel qsv 
--hwaccel_output_format qsv 
--extra_hw_frames 40`;
-
-    let outputVideoOptions: string = 
-`-ss 3 
--c:v h264_qsv -profile:v baseline -preset slow 
--vf "deinterlace_qsv,fps=60" -g 30 
--b:v 4M -maxrate 8M 
--bufsize 16M -rc_init_occupancy 8M 
--extbrc 1 -look_ahead_depth 40 
--b_strategy 1 -bf 7 -refs 5 
--adaptive_i 1 -adaptive_b 1 
--strict -1 -bitrate_limit 0 
--async_depth 1`;
 
     let player: Player;
 
     async function startBroadcast() {
-        const transcodeOptons = {
-            bitRateKbps,
-            inputVideoOptions: inputVideoOptions.replaceAll('\n', ' '),
-            outputVideoOptions: outputVideoOptions.replaceAll('\n', ' '),
-        };
-
-        client.startBroadcast(selectedChannel ?? '', transcodeOptons);
+        client.startBroadcast(selectedChannel ?? '');
     }
 
     $: onBroadcastReady($broadcastReady);
@@ -79,16 +63,7 @@
     {#if !$currentBroadcast}
         <div class="configuration">
             <ChannelSelector bind:selected={selectedChannel} />
-            <!-- svelte-ignore a11y-label-has-associated-control -->
-            <label>
-                Input params
-                <TextArea bind:value={inputVideoOptions} />
-            </label>
-            <!-- svelte-ignore a11y-label-has-associated-control -->
-            <label>
-                Output params
-                <TextArea bind:value={outputVideoOptions} />
-            </label>
+            <TranscodeConfig />
             <button class="start-broadcast" on:click={startBroadcast}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path d="M9.6,8l6.9,4l-6.9,4Z"></path>
@@ -129,25 +104,6 @@
 <DebugView {client} />
 
 <style>
-    button {
-        font-size: 16px;
-        border: none;
-        border-radius: 0.25em;
-        cursor: pointer;
-        height: 2.5em;
-        padding-inline: 1em;
-    }
-
-    button:hover {
-        filter: brightness(1.1);
-    }
-
-    button svg {
-        height: 2em;
-        stroke: currentColor;
-        fill: currentColor;
-    }
-    
     .start-broadcast {
         color: white;
         background-color: green;
@@ -212,12 +168,5 @@
         padding: 1em;
         display: grid;
         gap: 2em;
-    }
-
-    .configuration label {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5em;
     }
 </style>

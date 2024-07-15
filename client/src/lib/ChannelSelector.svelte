@@ -19,7 +19,7 @@
         <option>Select a channel</option>
     {:then channelList} 
         {#each channelList as channel}
-            <option value={channel.guideNumber}>{channel.guideNumber} - {channel.guideName}</option>
+            <option value={channel.guideNumber} selected={channel.guideNumber === selected}>{channel.guideNumber} - {channel.guideName}</option>
         {/each}
     {/await}
 </select>

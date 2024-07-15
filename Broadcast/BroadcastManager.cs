@@ -6,17 +6,17 @@ namespace LivingRoom.Broadcast
 
     public sealed class BroadcastManager : IDisposable
     {
-        private readonly BroadcastSessionFactory _sessionFactory;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IHubContext<ControlPanelHub, IControlPanelClient> _controlPanelHub;
         private readonly ILogger _logger;
         private BroadcastSession? _currentSession;
 
         public BroadcastManager(
-            BroadcastSessionFactory sessionFactory,
+            IServiceScopeFactory serviceScopeFactory,
             IHubContext<ControlPanelHub, IControlPanelClient> controlPanelHub,
             ILogger<BroadcastManager> logger)
         {
-            _sessionFactory = sessionFactory;
+            _serviceScopeFactory = serviceScopeFactory;
             _controlPanelHub = controlPanelHub;
             _logger = logger;
         }
@@ -26,14 +26,23 @@ namespace LivingRoom.Broadcast
         public BroadcastInfo? NowPlaying => 
             _currentSession?.IsReady == true ? _currentSession.BroadcastInfo : null;
 
-        public async Task<BroadcastInfo> StartSession(ChannelInfo channelInfo, TranscodeOptions transcodeOptions)
+        public async Task<BroadcastInfo> StartSession(ChannelInfo channelInfo)
         {
             if  (_currentSession is not null)
             {
                 throw new InvalidOperationException("Cannot start broadcast when another is already active!");
             }
 
-            var session = _sessionFactory.CreateBroadcast(channelInfo, transcodeOptions);
+            BroadcastSession session;
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var sessionFactory = scope.ServiceProvider.GetRequiredService<BroadcastSessionFactory>();
+                session = await sessionFactory.CreateBroadcast(channelInfo);
+
+                var historyService = scope.ServiceProvider.GetRequiredService<BroadcastHistoryService>();
+                await historyService.StartNewBroadcast(channelInfo);
+            }
+
             _currentSession = session;
             await _controlPanelHub.Clients.All.BroadcastStarted(session.BroadcastInfo);
 
@@ -54,6 +63,21 @@ namespace LivingRoom.Broadcast
             return session.BroadcastInfo;
         }
 
+        public async Task<ChannelInfo?> GetLastChannel()
+        {
+            using (var scope = _serviceScopeFactory.CreateScope())
+            {
+                var historyService = scope.ServiceProvider.GetRequiredService<BroadcastHistoryService>();
+                var latest = await historyService.GetLatestBroadcast();
+                if (latest is null)
+                {
+                    return null;
+                }
+
+                return new ChannelInfo(latest.GuideNumber, latest.GuideName, latest.Url);
+            }
+        }
+
         public async Task StopSessionAsync()
         {
             if (_currentSession is not null)
@@ -61,6 +85,12 @@ namespace LivingRoom.Broadcast
                 await _currentSession.StopAsync();
                 _currentSession.Dispose();
                 _currentSession = null;
+
+                using (var scope = _serviceScopeFactory.CreateScope())
+                {
+                    var historyService = scope.ServiceProvider.GetRequiredService<BroadcastHistoryService>();
+                    await historyService.EndCurrentBroadcast();
+                }
 
                 await _controlPanelHub.Clients.All.BroadcastStopped();
             }

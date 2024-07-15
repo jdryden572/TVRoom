@@ -13,11 +13,11 @@ namespace LivingRoom.Broadcast
             };
 
         private readonly FFmpegProcess _ffmpegProcess;
-        private readonly TranscodeConfiguration _transcodeConfig;
+        private readonly HlsConfiguration _transcodeConfig;
         private readonly ILogger _logger;
         private readonly CancellationTokenRegistration _tokenRegistration;
 
-        public BroadcastSession(BroadcastInfo broadcastInfo, DirectoryInfo transcodeDirectory, FFmpegProcess ffmpegProcess, TranscodeConfiguration transcodeConfig, ILogger logger)
+        public BroadcastSession(BroadcastInfo broadcastInfo, DirectoryInfo transcodeDirectory, FFmpegProcess ffmpegProcess, HlsConfiguration transcodeConfig, ILogger logger)
         {
             BroadcastInfo = broadcastInfo;
             TranscodeDirectory = transcodeDirectory;

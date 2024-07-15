@@ -46,12 +46,12 @@
 
 <style>
   textarea {
-        font-size: 16px;
-        font-family: consolas, monospace;
-        color: rgb(168, 168, 168);
-        background-color: rgb(28, 33, 44);
-        border: none;
-        padding: 0.5em;
-        resize: none;
-    }
+      font-size: 16px;
+      font-family: consolas, monospace;
+      color: rgb(168, 168, 168);
+      background-color: rgb(28, 33, 44);
+      border: none;
+      padding: 0.5em;
+      resize: none;
+  }
 </style>

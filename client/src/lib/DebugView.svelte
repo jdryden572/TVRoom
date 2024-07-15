@@ -61,6 +61,7 @@
             Retain 
             <input type="number" bind:value={messageCount}>
             lines
+            <button class=clear on:click={() => debugMessages.length = 0}>Clear</button>
         </div>
         <ul>
             {#each debugMessages as msg}
@@ -105,6 +106,16 @@
 
     .line-config {
         align-self: flex-end;
+        color: rgb(219, 219, 219);
+    }
+
+    .clear {
+        margin-left: 0.5em;
+        padding: 0.35em 0.5em;
+        height: unset;
+        background: none;
+        color: inherit;
+        border: 1px solid currentColor;
     }
 
     .debug-output ul {
