@@ -26,8 +26,8 @@
     async function saveConfig() {
         const config: TranscodeConfig = {
             name,
-            inputVideoParameters,
-            outputVideoParameters,
+            inputVideoParameters: inputVideoParameters.replaceAll(/\r|\n/g, ' '),
+            outputVideoParameters: outputVideoParameters.replaceAll(/\r|\n/g, ' '),
         };
 
         await fetch('/transcodeConfig', {
