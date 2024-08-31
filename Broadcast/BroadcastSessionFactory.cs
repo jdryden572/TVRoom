@@ -1,8 +1,8 @@
-﻿using LivingRoom.Configuration;
-using LivingRoom.Tuner;
+﻿using TVRoom.Configuration;
+using TVRoom.Tuner;
 using System.Security.Cryptography;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSessionFactory
     {

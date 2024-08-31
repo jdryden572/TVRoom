@@ -1,6 +1,6 @@
-﻿using LivingRoom.Tuner;
+﻿using TVRoom.Tuner;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public sealed record BroadcastInfo(ChannelInfo ChannelInfo, string SessionId, string FFmpegArguments)
     {

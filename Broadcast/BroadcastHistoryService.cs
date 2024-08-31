@@ -1,8 +1,8 @@
-﻿using LivingRoom.Persistence;
-using LivingRoom.Tuner;
+﻿using TVRoom.Persistence;
+using TVRoom.Tuner;
 using Microsoft.EntityFrameworkCore;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public sealed class BroadcastHistoryService
     {

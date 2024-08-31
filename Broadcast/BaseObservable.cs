@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public abstract class BaseObservable<T> : IObservable<T>
     {

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace LivingRoom.Pages
+namespace TVRoom.Pages
 {
     [AllowAnonymous]
     public class AccessDeniedModel : PageModel

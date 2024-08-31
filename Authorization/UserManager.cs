@@ -1,4 +1,4 @@
-﻿namespace LivingRoom.Authorization
+﻿namespace TVRoom.Authorization
 {
 
     public class UserManager

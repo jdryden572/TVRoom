@@ -1,8 +1,8 @@
-using LivingRoom.Authorization;
-using LivingRoom.Broadcast;
-using LivingRoom.Configuration;
-using LivingRoom.Persistence;
-using LivingRoom.Tuner;
+using TVRoom.Authorization;
+using TVRoom.Broadcast;
+using TVRoom.Configuration;
+using TVRoom.Persistence;
+using TVRoom.Tuner;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Vite.AspNetCore.Extensions;
@@ -15,8 +15,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddViteServices();
 
 builder.Services.AddGoogleAuthenticationServices(builder.Configuration);
-builder.Services.AddLivingRoomAuthorizationServices();
-builder.Services.AddLivingRoomBroadcastServices(builder.Configuration);
+builder.Services.AddTVRoomAuthorizationServices();
+builder.Services.AddTVRoomBroadcastServices(builder.Configuration);
 builder.Services.AddTunerServices(builder.Configuration);
 builder.Services.AddConfigurationServices();
 builder.Services.AddDbContext<TVRoomContext>(options =>

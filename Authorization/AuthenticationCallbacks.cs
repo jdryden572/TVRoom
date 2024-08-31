@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication.OAuth;
 using System.Security.Claims;
 
-namespace LivingRoom.Authorization
+namespace TVRoom.Authorization
 {
     public static class AuthenticationCallbacks
     {

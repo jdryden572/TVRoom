@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
-namespace LivingRoom.Persistence
+namespace TVRoom.Persistence
 {
     public class TVRoomContext : DbContext, IDataProtectionKeyContext
     {

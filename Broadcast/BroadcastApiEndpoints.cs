@@ -1,6 +1,6 @@
-﻿using LivingRoom.Helpers;
+﻿using TVRoom.Helpers;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public static class BroadcastApiEndpoints
     {

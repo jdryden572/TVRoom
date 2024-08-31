@@ -1,7 +1,7 @@
-﻿using LivingRoom.Persistence;
+﻿using TVRoom.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace LivingRoom.Configuration
+namespace TVRoom.Configuration
 {
     public sealed class TranscodeConfigService
     {

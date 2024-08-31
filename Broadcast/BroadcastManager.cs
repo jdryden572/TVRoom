@@ -1,7 +1,7 @@
-﻿using LivingRoom.Tuner;
+﻿using TVRoom.Tuner;
 using Microsoft.AspNetCore.SignalR;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
 
     public sealed class BroadcastManager : IDisposable

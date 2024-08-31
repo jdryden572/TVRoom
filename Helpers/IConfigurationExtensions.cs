@@ -1,4 +1,4 @@
-﻿namespace LivingRoom.Helpers
+﻿namespace TVRoom.Helpers
 {
     internal static class IConfigurationExtensions
     {

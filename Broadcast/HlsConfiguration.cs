@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public sealed class HlsConfiguration
     {

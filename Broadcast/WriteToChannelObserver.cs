@@ -1,6 +1,6 @@
 ﻿using System.Threading.Channels;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     internal sealed class WriteToChannelObserver : IObserver<string>, IDisposable
     {

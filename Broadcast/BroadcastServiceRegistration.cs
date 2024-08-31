@@ -1,8 +1,8 @@
-﻿namespace LivingRoom.Broadcast
+﻿namespace TVRoom.Broadcast
 {
     public static class BroadcastServiceRegistration
     {
-        public static IServiceCollection AddLivingRoomBroadcastServices(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddTVRoomBroadcastServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<HlsTranscodeOptions>(configuration.GetSection(HlsTranscodeOptions.SectionName));
 

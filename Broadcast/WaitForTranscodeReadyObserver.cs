@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     internal sealed class WaitForTranscodeReadyObserver : IObserver<string>
     {

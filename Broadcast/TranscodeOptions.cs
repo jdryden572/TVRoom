@@ -1,4 +1,4 @@
-﻿namespace LivingRoom.Broadcast
+﻿namespace TVRoom.Broadcast
 {
     public sealed record TranscodeOptions
     {

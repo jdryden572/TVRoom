@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace LivingRoom.Migrations
+namespace TVRoom.Migrations
 {
     /// <inheritdoc />
     public partial class AddBroadcastHistory : Migration

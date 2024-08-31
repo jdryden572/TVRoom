@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public class FFmpegProcess : BaseObservable<string>, IDisposable
     {

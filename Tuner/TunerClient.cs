@@ -1,4 +1,4 @@
-﻿namespace LivingRoom.Tuner
+﻿namespace TVRoom.Tuner
 {
     public sealed class TunerClient
     {

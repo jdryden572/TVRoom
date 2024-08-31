@@ -1,4 +1,4 @@
-﻿namespace LivingRoom.Persistence
+﻿namespace TVRoom.Persistence
 {
     public class TranscodeConfig
     {

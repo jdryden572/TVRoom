@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace LivingRoom.Tuner
+namespace TVRoom.Tuner
 {
     public sealed record ChannelInfo(
         string GuideNumber, 

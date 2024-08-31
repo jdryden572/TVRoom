@@ -1,7 +1,7 @@
-﻿using LivingRoom.Authorization;
-using LivingRoom.Helpers;
+﻿using TVRoom.Authorization;
+using TVRoom.Helpers;
 
-namespace LivingRoom.Tuner
+namespace TVRoom.Tuner
 {
     public static class TunerApiEndpoints
     {

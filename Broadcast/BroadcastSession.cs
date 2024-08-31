@@ -1,6 +1,6 @@
 ﻿using System.Threading.Channels;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSession : IDisposable
     {

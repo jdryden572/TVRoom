@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 
-namespace LivingRoom.Authorization
+namespace TVRoom.Authorization
 {
     public static class AuthorizationServiceRegistration
     {
@@ -37,7 +37,7 @@ namespace LivingRoom.Authorization
             return services;
         }
 
-        public static IServiceCollection AddLivingRoomAuthorizationServices(this IServiceCollection services)
+        public static IServiceCollection AddTVRoomAuthorizationServices(this IServiceCollection services)
         {
             var viewerPolicy = new AuthorizationPolicyBuilder()
                 .RequireRole(Roles.Viewer)

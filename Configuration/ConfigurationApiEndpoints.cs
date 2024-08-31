@@ -1,4 +1,4 @@
-﻿namespace LivingRoom.Configuration
+﻿namespace TVRoom.Configuration
 {
     public static class ConfigurationApiEndpoints
     {

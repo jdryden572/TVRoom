@@ -1,10 +1,10 @@
-﻿using LivingRoom.Authorization;
-using LivingRoom.Tuner;
+﻿using TVRoom.Authorization;
+using TVRoom.Tuner;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Threading.Channels;
 
-namespace LivingRoom.Broadcast
+namespace TVRoom.Broadcast
 {
     public interface IControlPanelClient
     {

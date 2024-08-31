@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace LivingRoom.Pages
+namespace TVRoom.Pages
 {
     [AllowAnonymous]
     public class LoginModel : PageModel
