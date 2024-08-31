@@ -20,4 +20,4 @@ RUN apt-get update
 RUN apt-get install -y aspnetcore-runtime-8.0
 WORKDIR /app
 COPY --from=build /app ./
-ENTRYPOINT ["dotnet", "LivingRoom.dll"]
+ENTRYPOINT ["dotnet", "TVRoom.dll"]
