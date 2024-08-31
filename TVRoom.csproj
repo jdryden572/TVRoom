@@ -22,6 +22,7 @@
     <Folder Include="client\public\" />
     <Folder Include="client\src\lib\" />
     <Folder Include="Migrations\" />
+    <Folder Include="CastReceiver\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 

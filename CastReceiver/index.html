@@ -1,0 +1,34 @@
+<html>
+<head>
+    <!-- Web Receiver SDK -->
+    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+    <!-- Cast Debug Logger -->
+    <script src="//www.gstatic.com/cast/sdk/libs/devtools/debug_layer/caf_receiver_logger.js"></script>
+</head>
+<body>
+  <cast-media-player></cast-media-player>
+
+  <script>
+    const castDebugLogger = cast.debug.CastDebugLogger.getInstance();
+    const context = cast.framework.CastReceiverContext.getInstance();
+
+    const playbackConfig = new cast.framework.PlaybackConfig();
+
+    const playerManager = cast.framework.CastReceiverContext.getInstance().getPlayerManager();
+    playerManager.removeSupportedMediaCommands(cast.framework.messages.Command.SEEK, true);
+    playerManager.setMessageInterceptor(
+      cast.framework.messages.MessageType.LOAD,
+      request => { /* cast.framework.messages.LoadRequestData */
+          castDebugLogger.info('custom_load', 'I intercepted the load request to set LIVE mode!');
+          request.media.streamType = cast.framework.messages.StreamType.LIVE;
+          return request;
+      });
+
+    context.start( { 
+      playbackConfig,
+      //shakaVariant: cast.framework.ShakaVariant.DEBUG,
+      useShakaForHls: true,
+    });
+  </script>
+</body>
+</html>
