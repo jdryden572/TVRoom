@@ -58,6 +58,10 @@
 
 </script>
 
+<div class="links">
+    <a href="/UsersConfig">Manage Users</a>
+</div>
+
 <div class="main">
     
     {#if !$currentBroadcast}
@@ -104,6 +108,24 @@
 <DebugView {client} />
 
 <style>
+    .links {
+        margin-inline: 1em;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1em
+    }
+
+    .links a {
+        color: #8b8b8b;
+        text-decoration: none;
+        transition: color 150ms ease;
+        line-height: 2em;
+    }
+
+    .links a:hover {
+        color: white;
+    }
+
     .start-broadcast {
         color: white;
         background-color: green;

@@ -16,6 +16,7 @@ export default defineConfig({
             input: [
                 'src/root.ts',
                 'src/control-panel.ts',
+                'src/users-config.ts',
             ],
             output: {
                 // Save entry files to the appropriate folder

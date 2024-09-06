@@ -14,6 +14,8 @@ namespace TVRoom.Persistence
 
         public DbSet<BroadcastSessionRecord> BroadcastSessionRecords { get; set; }
 
+        public DbSet<AuthorizedUser> AuthorizedUsers { get; set; }
+
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
     }
 }

@@ -53,7 +53,7 @@ namespace TVRoom.Authorization
                 .SetDefaultPolicy(viewerPolicy)
                 .SetFallbackPolicy(viewerPolicy);
 
-            return services.AddSingleton<UserManager>();
+            return services.AddTransient<UserManager>();
         }
     }
 }

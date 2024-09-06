@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TVRoom.Persistence;
 
@@ -10,9 +11,11 @@ using TVRoom.Persistence;
 namespace TVRoom.Migrations
 {
     [DbContext(typeof(TVRoomContext))]
-    partial class TVRoomContextModelSnapshot : ModelSnapshot
+    [Migration("20240902191243_AddAuthorizedUsers")]
+    partial class AddAuthorizedUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.7");

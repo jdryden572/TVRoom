@@ -76,5 +76,6 @@ app.MapHub<ControlPanelHub>("/controlPanelHub");
 app.MapBroadcastApiEndpoints(builder.Configuration);
 app.MapTunerApiEndpoints();
 app.MapConfigurationApiEndpoints();
+app.MapUserApiEndpoints();
 
 app.Run();
