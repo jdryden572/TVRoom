@@ -101,9 +101,6 @@
     {/if}
 </div>
 
-<!-- svelte-ignore a11y-media-has-caption -->
-<!-- <video class="video-js" bind:this={videoElement} width="400" height="300"></video> -->
-
 <hr/>
 <DebugView {client} />
 

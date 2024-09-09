@@ -45,33 +45,44 @@
 </script>
 
 <div class="debug-view">
-    <h3>Debug info</h3>
     {#if $currentBroadcast}
-        <div>
-            <h5>Session ID</h5>
-            <p>{$currentBroadcast?.sessionId}</p>
-        </div>
-        <div>
-            <h5>Transcode command</h5>
-            <p>ffmpeg {$currentBroadcast?.fFmpegArguments}</p>
-        </div>
+        <details>
+            <summary>Session info</summary>
+            <div class="session-details">
+                <div>
+                    <h5>Session ID</h5>
+                    <p>{$currentBroadcast?.sessionId}</p>
+                </div>
+                <div>
+                    <h5>Transcode command</h5>
+                    <p>ffmpeg {$currentBroadcast?.fFmpegArguments}</p>
+                </div>
+            </div>
+        </details>
     {/if}
-    <div class="debug-output">
-        <div class="line-config">
-            Retain 
-            <input type="number" bind:value={messageCount}>
-            lines
-            <button class=clear on:click={() => debugMessages.length = 0}>Clear</button>
+    <details open>
+        <summary>Transcode output</summary>
+        <div class="debug-output">
+            <div class="line-config">
+                Retain 
+                <input type="number" bind:value={messageCount}>
+                lines
+                <button class=clear on:click={() => debugMessages.length = 0}>Clear</button>
+            </div>
+            <ul>
+                {#each debugMessages as msg}
+                    <li>{msg}</li>
+                {/each}
+            </ul>
         </div>
-        <ul>
-            {#each debugMessages as msg}
-                <li>{msg}</li>
-            {/each}
-        </ul>
-    </div>
+    </details>
 </div>
 
 <style>
+    h5 {
+        margin: 0;
+    }
+
     .debug-view {
         display: flex;
         flex-direction: column;
@@ -80,8 +91,26 @@
         padding-inline: 1em;
     }
 
-    * {
+    .session-details {
+        margin: 1em;
+    }
+
+    details {
+        border: 1px solid #282828;
+    }
+
+    details h5 {
         margin: 0;
+    }
+
+    summary {
+        cursor: pointer;
+        padding: 0.5em 1em;
+        align-self: flex-start;
+    }
+
+    summary:hover {
+        background-color: rgb(28, 33, 44);
     }
 
     p {
@@ -99,12 +128,14 @@
     }
 
     .debug-output {
+        margin-top: 0.5em;
         display: flex;
         flex-direction: column;
         gap: 0.5em;
     }
 
     .line-config {
+        margin-right: 0.5em;
         align-self: flex-end;
         color: rgb(219, 219, 219);
     }
@@ -119,6 +150,7 @@
     }
 
     .debug-output ul {
+        margin: 0;
         font-family: consolas;
         font-size: 12px;
         list-style-type: none;

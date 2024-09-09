@@ -85,7 +85,7 @@
 
     summary {
         cursor: pointer;
-        padding: 1em;
+        padding: 0.5em 1em;
         align-self: flex-start;
     }
 
@@ -102,9 +102,11 @@
 
     .config-name {
         background-color: rgb(28, 33, 44);
+        line-height: 2em;
         padding: 0.5em 0.75em;
         border-radius: 0.25em;
         margin-left: 0.5em;
+        outline: 2px solid #121212;
     }
 
     .config-name.unsaved {
