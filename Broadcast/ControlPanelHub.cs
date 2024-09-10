@@ -58,5 +58,10 @@ namespace TVRoom.Broadcast
 
             return currentSession.GetDebugOutput(cancellation);
         }
+
+        public ChannelReader<TunerStatus[]> GetTunerStatuses(CancellationToken cancellation)
+        {
+            return TunerStatusChannelWriter.CreateReader(_tunerClient, cancellation);
+        }
     }
 }

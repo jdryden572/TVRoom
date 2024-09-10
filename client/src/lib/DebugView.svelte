@@ -2,8 +2,10 @@
     import { type ISubscription } from "@microsoft/signalr";
     import type { BroadcastInfo, ControlPanelClient } from "./controlPanelClient";
     import { tick } from "svelte";
+    import TunerStatusMonitor from "./TunerStatusMonitor.svelte";
 
     export let client: ControlPanelClient;
+    $: clientConnected = client.connected;
     $: currentBroadcast = client.currentBroadcast;
 
     $: onBroadcastChange($currentBroadcast);
@@ -76,6 +78,13 @@
             </ul>
         </div>
     </details>
+
+    {#if $clientConnected}
+        <details>
+            <summary>Tuner status</summary>
+            <TunerStatusMonitor {client} />
+        </details>
+    {/if}
 </div>
 
 <style>
@@ -89,6 +98,7 @@
         gap: 2em;
         padding-top: 1em;
         padding-inline: 1em;
+        margin-bottom: 2em;
     }
 
     .session-details {

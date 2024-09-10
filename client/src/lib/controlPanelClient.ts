@@ -14,11 +14,25 @@ interface ChannelInfo {
     URL: string,
 }
 
+interface TunerStatus {
+    resource: string,
+    timestamp: number,
+    channelNumber: string,
+    channelName: string,
+    targetIP: string,
+    networkRate: number,
+    signalStrengthPercent: number,
+    signalQualityPercent: number,
+    symbolQualityPercent: number,
+}
+
 class ControlPanelClient {
     private readonly connection: HubConnection;
+    private readonly connectedWritable: Writable<boolean> = writable(false);
     private readonly currentBroadcastWritable: Writable<BroadcastInfo | undefined> = writable(undefined);
     private readonly broadcastReadyWritable: Writable<BroadcastInfo | undefined> = writable(undefined);
 
+    public connected: Readable<boolean> = readonly(this.connectedWritable);
     public currentBroadcast: Readable<BroadcastInfo | undefined> = readonly(this.currentBroadcastWritable);
     public broadcastReady: Readable<BroadcastInfo | undefined> = readonly(this.broadcastReadyWritable);
 
@@ -38,6 +52,7 @@ class ControlPanelClient {
     public async connect() {
         try {
             await this.connection.start();
+            this.connectedWritable.set(true);
             const activeBroadcast = await this.connection.invoke('GetCurrentSession') as BroadcastInfo | undefined;
             this.currentBroadcastWritable.set(activeBroadcast);
             if (activeBroadcast) {
@@ -81,15 +96,25 @@ class ControlPanelClient {
 
     public subscribeToDebugOutput(onValue: (msg: string) => void) : ISubscription<any> {
         return this.connection.stream('GetDebugOutput')
-        .subscribe({
-            next: onValue,
-            complete: () => {},
-            error: console.error,
-        });
+            .subscribe({
+                next: onValue,
+                complete: () => {},
+                error: console.error,
+            });
+    }
+
+    public subscribeToTunerStatuses(onValue: (statuses: TunerStatus[]) => void) : ISubscription<any> {
+        return this.connection.stream('GetTunerStatuses')
+            .subscribe({
+                next: onValue,
+                complete: () => {},
+                error: console.error,
+            });
     }
 }
 
 export {
     ControlPanelClient,
     type BroadcastInfo,
+    type TunerStatus,
 }
