@@ -59,6 +59,17 @@ namespace TVRoom.Broadcast
             return currentSession.GetDebugOutput(cancellation);
         }
 
+        public ChannelReader<int> GetBitrate(CancellationToken cancellation)
+        {
+            var currentSession = _broadcastManager.CurrentSession;
+            if (currentSession is null)
+            {
+                throw new InvalidOperationException("No broadcast session is active");
+            }
+
+            return currentSession.GetBitrate(cancellation);
+        }
+
         public ChannelReader<TunerStatus[]> GetTunerStatuses(CancellationToken cancellation)
         {
             return TunerStatusChannelWriter.CreateReader(_tunerClient, cancellation);

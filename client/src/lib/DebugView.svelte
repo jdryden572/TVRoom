@@ -10,14 +10,20 @@
 
     $: onBroadcastChange($currentBroadcast);
 
+    let bitrate = 0;
+    let bitrateSubscription: ISubscription<any> | undefined; 
     let debugSubscription : ISubscription<any> | undefined;
     function onBroadcastChange(activeBroadcastSession: BroadcastInfo | undefined) {
         if (!activeBroadcastSession) {
             debugSubscription?.dispose();
             debugSubscription = undefined;
+            bitrateSubscription?.dispose();
+            bitrateSubscription = undefined;
+            bitrate = 0;
         } else {
             if (!debugSubscription) {
                 debugSubscription = client.subscribeToDebugOutput(addDebugMessage);
+                bitrateSubscription = client.subscribeToBitrate(rate => bitrate = rate);
             }
         }
     }
@@ -65,11 +71,17 @@
     <details open>
         <summary>Transcode output</summary>
         <div class="debug-output">
-            <div class="line-config">
-                Retain 
-                <input type="number" bind:value={messageCount}>
-                lines
-                <button class=clear on:click={() => debugMessages.length = 0}>Clear</button>
+            <div class="debug-output-header">
+                <div class="bitrate">
+                    {(bitrate / 1000000).toFixed(3)}
+                    <span>Mb/s</span>
+                </div>
+                <div class="line-config">
+                    Retain 
+                    <input type="number" bind:value={messageCount}>
+                    lines
+                    <button class=clear on:click={() => debugMessages.length = 0}>Clear</button>
+                </div>
             </div>
             <ul>
                 {#each debugMessages as msg}
@@ -144,8 +156,18 @@
         gap: 0.5em;
     }
 
+    .debug-output-header {
+        padding-inline: 0.5em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .bitrate span {
+        font-size: x-small;
+    }
+
     .line-config {
-        margin-right: 0.5em;
         align-self: flex-end;
         color: rgb(219, 219, 219);
     }

@@ -4,6 +4,14 @@ namespace TVRoom.Tuner
 {
     public class TunerStatusChannelWriter
     {
+        private static readonly BoundedChannelOptions _channelOptions =
+            new BoundedChannelOptions(50)
+            {
+                FullMode = BoundedChannelFullMode.DropOldest,
+                SingleReader = true,
+                SingleWriter = true,
+            };
+
         private readonly ChannelWriter<TunerStatus[]> _channelWriter;
         private readonly TunerClient _tunerClient;
 
@@ -15,7 +23,7 @@ namespace TVRoom.Tuner
 
         public static ChannelReader<TunerStatus[]> CreateReader(TunerClient tunerClient, CancellationToken cancellation)
         {
-            var channel = Channel.CreateUnbounded<TunerStatus[]>();
+            var channel = Channel.CreateBounded<TunerStatus[]>(_channelOptions);
             var statusWriter = new TunerStatusChannelWriter(channel.Writer, tunerClient);
             Task.Run(() => statusWriter.StartAsync(cancellation));
             return channel.Reader;

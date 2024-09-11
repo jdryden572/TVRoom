@@ -103,6 +103,15 @@ class ControlPanelClient {
             });
     }
 
+    public subscribeToBitrate(onValue: (rate: number) => void) : ISubscription<any> {
+        return this.connection.stream('GetBitrate')
+            .subscribe({
+                next: onValue,
+                complete: () => {},
+                error: console.error,
+            });
+    }
+
     public subscribeToTunerStatuses(onValue: (statuses: TunerStatus[]) => void) : ISubscription<any> {
         return this.connection.stream('GetTunerStatuses')
             .subscribe({

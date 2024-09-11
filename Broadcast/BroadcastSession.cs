@@ -2,6 +2,7 @@
 
 namespace TVRoom.Broadcast
 {
+
     public sealed class BroadcastSession : IDisposable
     {
         private static readonly BoundedChannelOptions _debugOutputChannelOptions = 
@@ -12,6 +13,7 @@ namespace TVRoom.Broadcast
                 SingleWriter = true,
             };
 
+        private readonly TranscodeSegmentBitrateWatcher _transcodeBitrateWatcher;
         private readonly FFmpegProcess _ffmpegProcess;
         private readonly HlsConfiguration _transcodeConfig;
         private readonly ILogger _logger;
@@ -23,6 +25,7 @@ namespace TVRoom.Broadcast
             TranscodeDirectory = transcodeDirectory;
             _ffmpegProcess = ffmpegProcess;
             _transcodeConfig = transcodeConfig;
+            _transcodeBitrateWatcher = new TranscodeSegmentBitrateWatcher(transcodeDirectory);
             _logger = logger;
             _tokenRegistration = _transcodeConfig.ApplicationStopping.Register(Dispose);
         }
@@ -46,25 +49,15 @@ namespace TVRoom.Broadcast
 
         public async Task StopAsync() => await _ffmpegProcess.StopAsync();
 
-        public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe)
-        {
-            var channel = Channel.CreateBounded<string>(_debugOutputChannelOptions);
-            var observer = new WriteToChannelObserver(channel.Writer);
-            var unsubscriber = _ffmpegProcess.Subscribe(observer);
+        public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe) => ChannelHelpers.GetChannelReader(_ffmpegProcess, unsubscribe);
 
-            unsubscribe.Register(() =>
-            {
-                unsubscriber.Dispose();
-                observer.Dispose();
-            });
-
-            return channel.Reader;
-        }
+        public ChannelReader<int> GetBitrate(CancellationToken unsubscribe) => ChannelHelpers.GetChannelReader(_transcodeBitrateWatcher, unsubscribe);
 
         public void Dispose()
         {
             _ffmpegProcess.Dispose();
             _tokenRegistration.Dispose();
+            _transcodeBitrateWatcher.Dispose();
             try
             {
                 TranscodeDirectory.Delete(recursive: true);
