@@ -13,6 +13,10 @@
             <div class="info">
                 <h2>{tuner.channelName}</h2>
                 <h5>Channel {tuner.channelNumber}</h5>
+                <div class="network-rate">
+                    <span>{(tuner.networkRate / 1000000.0).toFixed(3)}</span>
+                    <span class="units">Mb/s</span>
+                </div>
             </div>
             <div class="strengths">
                 <div class="bar">
@@ -74,6 +78,14 @@
 
     .info * {
         margin: 0;
+    }
+
+    .network-rate {
+        text-align: center;
+        margin-top: 1em;
+        & .units {
+            font-size: x-small;
+        }
     }
     
     .bar {
