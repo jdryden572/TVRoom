@@ -76,6 +76,7 @@
     .active {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 1em;
         padding: 0.5em;
     }
