@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { TunerStatus } from "./controlPanelClient";
+    import TunerStatusChart from "./TunerStatusChart.svelte";
 
     export let tuner: TunerStatus;
 </script>
@@ -21,25 +22,28 @@
             <div class="strengths">
                 <div class="bar">
                     <label>
+                        Symbol quality
+                        <progress style="accent-color: #0075ff" max="100" value={tuner.symbolQualityPercent}></progress>
+                    </label>
+                    <span>{tuner.symbolQualityPercent}</span>
+                </div>
+                <div class="bar">
+                    <label>
                         Signal strength
-                        <progress max="100" value={tuner.signalStrengthPercent}></progress>
+                        <progress style="accent-color: red" max="100" value={tuner.signalStrengthPercent}></progress>
                     </label>
                     <span>{tuner.signalStrengthPercent}</span>
                 </div>
                 <div class="bar">
                     <label>
                         Signal quality
-                        <progress max="100" value={tuner.signalQualityPercent}></progress>
+                        <progress style="accent-color: green" max="100" value={tuner.signalQualityPercent}></progress>
                     </label>
                     <span>{tuner.signalQualityPercent}</span>
                 </div>
-                <div class="bar">
-                    <label>
-                        Symbol quality
-                        <progress max="100" value={tuner.symbolQualityPercent}></progress>
-                    </label>
-                    <span>{tuner.symbolQualityPercent}</span>
-                </div>
+            </div>
+            <div class="chart">
+                <TunerStatusChart {tuner} />
             </div>
         </div>
     {:else}
@@ -93,8 +97,15 @@
         align-items: flex-end;
         gap: 0.5em;
     }
+
     .bar label {
         display: flex;
         flex-direction: column;
+    }
+
+    .chart {
+        height: 150px;
+        flex: 1;
+        position: relative;
     }
 </style>

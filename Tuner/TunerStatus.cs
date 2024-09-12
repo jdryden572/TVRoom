@@ -10,6 +10,6 @@
         int SignalQualityPercent,
         int SymbolQualityPercent)
     {
-        public DateTime Timestamp { get; } = DateTime.UtcNow;
+        public long Timestamp { get; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 }
