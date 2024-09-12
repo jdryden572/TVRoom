@@ -10,7 +10,6 @@ namespace TVRoom.Broadcast
         public TranscodeSegmentBitrateWatcher(DirectoryInfo transcodeDirectory)
         {
             _watcher = new FileSystemWatcher(transcodeDirectory.FullName, "*.ts");
-            _watcher.NotifyFilter = NotifyFilters.Size;
             _watcher.Changed += OnChanged;
             _watcher.Error += OnError;
             _watcher.EnableRaisingEvents = true;
