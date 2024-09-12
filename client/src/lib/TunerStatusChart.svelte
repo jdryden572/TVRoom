@@ -82,7 +82,9 @@
                             type: 'time',
                             time: {
                                 unit: 'second',
-                                
+                                displayFormats: {
+                                    second: 'HH:mm:ss'
+                                }
                             },
                             ticks: {
                                 stepSize: 15,
