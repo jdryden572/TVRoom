@@ -14,17 +14,21 @@ namespace TVRoom.Broadcast
 
         private readonly FFmpegProcess _ffmpegProcess;
         private readonly HlsConfiguration _transcodeConfig;
+        private readonly TranscodeLogObserver _logObserver;
+        private readonly IDisposable _logObserverSubscription;
         private readonly ILogger _logger;
         private readonly CancellationTokenRegistration _tokenRegistration;
 
-        public BroadcastSession(BroadcastInfo broadcastInfo, DirectoryInfo transcodeDirectory, FFmpegProcess ffmpegProcess, HlsConfiguration transcodeConfig, ILogger logger)
+        public BroadcastSession(BroadcastInfo broadcastInfo, DirectoryInfo transcodeDirectory, FFmpegProcess ffmpegProcess, HlsConfiguration hlsConfig, ILogger logger)
         {
             BroadcastInfo = broadcastInfo;
             TranscodeDirectory = transcodeDirectory;
             _ffmpegProcess = ffmpegProcess;
-            _transcodeConfig = transcodeConfig;
+            _transcodeConfig = hlsConfig;
             _logger = logger;
             _tokenRegistration = _transcodeConfig.ApplicationStopping.Register(Dispose);
+            _logObserver = new TranscodeLogObserver(hlsConfig, broadcastInfo);
+            _logObserverSubscription = _ffmpegProcess.Subscribe(_logObserver);
         }
 
         public BroadcastInfo BroadcastInfo { get; }
@@ -65,6 +69,8 @@ namespace TVRoom.Broadcast
         {
             _ffmpegProcess.Dispose();
             _tokenRegistration.Dispose();
+            _logObserverSubscription.Dispose();
+            _logObserver.Dispose();
             try
             {
                 TranscodeDirectory.Delete(recursive: true);
