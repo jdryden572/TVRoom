@@ -3,6 +3,7 @@
     import type { BroadcastInfo, ControlPanelClient } from "./controlPanelClient";
     import { tick } from "svelte";
     import TunerStatusMonitor from "./TunerStatusMonitor.svelte";
+    import TranscodeLogs from "./TranscodeLogs.svelte";
 
     export let client: ControlPanelClient;
     $: clientConnected = client.connected;
@@ -85,6 +86,11 @@
             <TunerStatusMonitor {client} />
         </details>
     {/if}
+
+    <details>
+        <summary>Transcode logs</summary>
+        <TranscodeLogs />
+    </details>
 </div>
 
 <style>

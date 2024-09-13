@@ -13,7 +13,7 @@ namespace TVRoom.Broadcast
             var logPath = Path.Combine(hlsConfig.BaseTranscodeDirectory.FullName, logName);
 
             _log = new LoggerConfiguration()
-                .WriteTo.File(logPath)
+                .WriteTo.File(logPath, flushToDiskInterval: TimeSpan.FromSeconds(30))
                 .CreateLogger();
         }
 
