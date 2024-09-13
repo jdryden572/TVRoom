@@ -45,6 +45,7 @@
 <div class="container">
     <button on:click={() => refreshLogList()}>
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M13,11l3.22-3.22A5.91,5.91,0,0,0,12,6a6,6,0,1,0,5.65,8h2.08a8,8,0,1,1-2.08-7.65L20,4v7Z"/></svg>
+        Refresh
     </button>
     {#each logs as log}
         <div class="log-file">
@@ -67,16 +68,23 @@
         padding: 0.5em 1em;
     }
 
+    .name {
+        word-wrap: break-word;
+        min-width: 0;
+    }
+
     .log-file {
         padding-block: 0.5em;
         display: flex;
         align-items: center;
         gap: 1em;
+        min-width: 0;
     }
 
     a {
         text-decoration: none;
-        color: currentColorl
+        color: currentColor;
+        flex-shrink: 0;
     }
 
     .download {
@@ -95,6 +103,7 @@
         background-color: black;
         padding: 0.5em;
         display: flex;
+        gap: 0.25em;
         flex-shrink: 0;
         align-items: center;
         color: rgb(156, 156, 156);
