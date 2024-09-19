@@ -74,7 +74,7 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapHub<ControlPanelHub>("/controlPanelHub");
 app.MapBroadcastApiEndpoints(builder.Configuration);
-app.MapLogFileEndpoints();
+app.MapTranscodeLogEndpoints();
 app.MapTunerApiEndpoints();
 app.MapConfigurationApiEndpoints();
 app.MapUserApiEndpoints();

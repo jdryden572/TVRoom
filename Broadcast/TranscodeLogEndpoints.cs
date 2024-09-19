@@ -2,9 +2,9 @@
 
 namespace TVRoom.Broadcast
 {
-    public static class LogFileEndpoints
+    public static class TranscodeLogEndpoints
     {
-        public static IEndpointRouteBuilder MapLogFileEndpoints(this IEndpointRouteBuilder app)
+        public static IEndpointRouteBuilder MapTranscodeLogEndpoints(this IEndpointRouteBuilder app)
         {
             var group = app.MapGroup("/logs")
                 .RequireAuthorization(Policies.RequireAdministrator);

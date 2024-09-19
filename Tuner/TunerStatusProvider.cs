@@ -1,46 +1,27 @@
-﻿using TVRoom.Broadcast;
+﻿using System.Reactive.Linq;
 
 namespace TVRoom.Tuner
 {
-    public sealed class TunerStatusProvider : BaseObservable<TunerStatus[]>, IDisposable
+    public sealed class TunerStatusProvider 
     {
-        private readonly object _lock = new();
         private readonly TunerClient _tunerClient;
+        private readonly ILogger _logger;
 
-        private CancellationTokenSource? _cts;
-
-        public TunerStatusProvider(TunerClient tunerClient)
+        public TunerStatusProvider(TunerClient tunerClient, ILogger<TunerStatusProvider> logger)
         {
             _tunerClient = tunerClient;
+            _logger = logger;
+
+            Statuses = Observable.Create<TunerStatus[]>(GetStatusesPeriodicallyAsync)
+                .Publish()
+                .RefCount();
         }
 
-        public void Dispose()
-        {
-            Complete();
-            _cts?.Cancel();
-            _cts?.Dispose();
-        }
+        public IObservable<TunerStatus[]> Statuses { get; }
 
-        protected override void OnSubscriberCountChange(int count)
+        private async Task GetStatusesPeriodicallyAsync(IObserver<TunerStatus[]> obs, CancellationToken cancellation)
         {
-            lock (_lock)
-            {
-                if (count > 0 && _cts is null)
-                {
-                    _cts = new();
-                    _ = Task.Run(() => StartAsync(_cts.Token));
-                }
-                else if (count == 0 && _cts is not null)
-                {
-                    _cts.Cancel();
-                    _cts.Dispose();
-                    _cts = null;
-                }
-            }
-        }
-
-        private async Task StartAsync(CancellationToken cancellation)
-        {
+            _logger.LogInformation("Starting to fetch tuner status periodically");
             using var ticker = new PeriodicTimer(TimeSpan.FromSeconds(1));
             while (!cancellation.IsCancellationRequested)
             {
@@ -48,13 +29,18 @@ namespace TVRoom.Tuner
                 {
                     await ticker.WaitForNextTickAsync(cancellation);
                     var statuses = await _tunerClient.GetTunerStatusesAsync(cancellation);
-                    Next(statuses);
+                    obs.OnNext(statuses);
+                }
+                catch (OperationCanceledException)
+                {
                 }
                 catch (Exception ex)
                 {
-                    Error(ex);
+                    _logger.LogError(ex, "Error fetching tuner status");
                 }
             }
+
+            _logger.LogInformation("Stopping tuner status fetching");
         }
     }
 }

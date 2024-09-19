@@ -1,13 +1,18 @@
 ﻿using System.Diagnostics;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 
 namespace TVRoom.Broadcast
 {
-    public class FFmpegProcess : BaseObservable<string>, IDisposable
+    public class FFmpegProcess : IDisposable
     {
         private readonly ILogger _logger;
         private readonly Process _process = new();
         private bool _disposed = false;
         private bool _stopRequested = false;
+        private Subject<Unit> _stopping = new();
+        private Subject<string> _additionalMessages = new();
 
         public FFmpegProcess(string ffmpegPath, string arguments, ILogger logger)
         {
@@ -22,9 +27,17 @@ namespace TVRoom.Broadcast
             _process.StartInfo.RedirectStandardOutput = true;
             _process.StartInfo.RedirectStandardError = true;
             _process.EnableRaisingEvents = true;
-            _process.ErrorDataReceived += (_, e) => Next(e.Data ?? string.Empty);
             _process.Exited += OnExited;
+
+            FFmpegOutput = Observable.FromEventPattern<DataReceivedEventHandler, DataReceivedEventArgs>(
+                    h => _process.ErrorDataReceived += h,
+                    h => _process.ErrorDataReceived -= h)
+                .Select(e => e.EventArgs.Data ?? string.Empty)
+                .Merge(_additionalMessages)
+                .TakeUntil(_stopping);
         }
+
+        public IObservable<string> FFmpegOutput { get; }
 
         public void Start()
         {
@@ -81,11 +94,14 @@ namespace TVRoom.Broadcast
 
         private void OnExited(object? sender, EventArgs e)
         {
+            // Ensure that StdErr events are flushed to our observable
+            _process.WaitForExit();
+
             if (!_stopRequested)
             {
                 // The process exited before we stopped it, something has gone wrong.
                 _logger.LogError("ffmpeg process stopped unexpectedly!");
-                Error(new Exception("ffmpeg process stopped unexpectedly!"));
+                _additionalMessages.OnNext("ffmpeg process stopped unexpectedly!");
                 Dispose();
             }
         }
@@ -96,8 +112,6 @@ namespace TVRoom.Broadcast
             {
                 return;
             }
-
-            _process.Exited -= OnExited;
 
             bool hasExited = false;
             try
@@ -114,7 +128,7 @@ namespace TVRoom.Broadcast
                 _logger.LogInformation("Disposing of FFmpegProcess and ffmpeg is still running. Attempting to kill process now.");
                 try
                 {
-                    _process.Kill();
+                    _process.Kill(entireProcessTree: true);
                 }
                 catch (Exception ex)
                 {
@@ -122,9 +136,10 @@ namespace TVRoom.Broadcast
                 }
             }
 
+            _process.Exited -= OnExited;
             _process.Dispose();
             _disposed = true;
-            Complete();
+            _stopping.OnNext(Unit.Default);
         }
     }    
 }

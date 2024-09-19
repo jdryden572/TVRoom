@@ -2,7 +2,7 @@
 
 namespace TVRoom.Broadcast
 {
-    public static class ChannelHelper
+    public static class ObservableToChannelExtensions
     {
         private static readonly BoundedChannelOptions _debugOutputChannelOptions =
             new BoundedChannelOptions(200)
@@ -12,19 +12,23 @@ namespace TVRoom.Broadcast
                 SingleWriter = true,
             };
 
-        public static ChannelReader<T> CreateReader<T>(IObservable<T> observable, CancellationToken unsubscribe)
+        public static ChannelReader<T> AsChannelReader<T>(this IObservable<T> source, CancellationToken unsubscribe)
         {
             var channel = Channel.CreateBounded<T>(_debugOutputChannelOptions);
-            var observer = new WriteToChannelObserver<T>(channel.Writer);
-            var unsubscriber = observable.Subscribe(observer);
+            var (writer, reader) = (channel.Writer, channel.Reader);
+
+            var unsubscriber = source.Subscribe(
+                val => writer.TryWrite(val),
+                ex => writer.TryComplete(ex),
+                () => writer.TryComplete());
 
             unsubscribe.Register(() =>
             {
                 unsubscriber.Dispose();
-                observer.Dispose();
+                writer.TryComplete();
             });
 
-            return channel.Reader;
+            return reader;
         }
     }
 }

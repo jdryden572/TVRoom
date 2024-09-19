@@ -1,21 +1,13 @@
-﻿using System.Threading.Channels;
+﻿using System.Reactive.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Channels;
 
 namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSession : IDisposable
     {
-        private static readonly BoundedChannelOptions _debugOutputChannelOptions = 
-            new BoundedChannelOptions(200) 
-            { 
-                FullMode = BoundedChannelFullMode.DropOldest, 
-                SingleReader = true, 
-                SingleWriter = true,
-            };
-
         private readonly FFmpegProcess _ffmpegProcess;
-        private readonly HlsConfiguration _transcodeConfig;
-        private readonly TranscodeLogObserver _logObserver;
-        private readonly IDisposable _logObserverSubscription;
+        private readonly HlsConfiguration _hlsConfig;
         private readonly ILogger _logger;
         private readonly CancellationTokenRegistration _tokenRegistration;
 
@@ -24,11 +16,11 @@ namespace TVRoom.Broadcast
             BroadcastInfo = broadcastInfo;
             TranscodeDirectory = transcodeDirectory;
             _ffmpegProcess = ffmpegProcess;
-            _transcodeConfig = hlsConfig;
+            _hlsConfig = hlsConfig;
             _logger = logger;
-            _tokenRegistration = _transcodeConfig.ApplicationStopping.Register(Dispose);
-            _logObserver = new TranscodeLogObserver(hlsConfig, broadcastInfo);
-            _logObserverSubscription = _ffmpegProcess.Subscribe(_logObserver);
+            _tokenRegistration = _hlsConfig.ApplicationStopping.Register(Dispose);
+
+            _ffmpegProcess.FFmpegOutput.WriteTranscodeLogsToFile(broadcastInfo, hlsConfig);
         }
 
         public BroadcastInfo BroadcastInfo { get; }
@@ -39,28 +31,24 @@ namespace TVRoom.Broadcast
 
         public async Task StartAndWaitForReadyAsync()
         {
-            var waitForTranscodeReady = new WaitForTranscodeReadyObserver(_transcodeConfig.HlsPlaylistReadyCount);
-            using (_ffmpegProcess.Subscribe(waitForTranscodeReady))
-            {
-                _ffmpegProcess.Start();
-                await waitForTranscodeReady.TranscodeReady;
-                IsReady = true;
-            }
+            var waitForReady = _ffmpegProcess.FFmpegOutput
+                .Where(line => HlsRegexPatterns.WritingHlsSegment().IsMatch(line))
+                .Take(_hlsConfig.HlsPlaylistReadyCount)
+                .Count();
+
+            _ffmpegProcess.Start();
+            await waitForReady;
+            IsReady = true;
         }
 
         public async Task StopAsync() => await _ffmpegProcess.StopAsync();
 
-        public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe)
-        {
-            return ChannelHelper.CreateReader(_ffmpegProcess, unsubscribe);
-        }
+        public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe) => _ffmpegProcess.FFmpegOutput.AsChannelReader(unsubscribe);
 
         public void Dispose()
         {
             _ffmpegProcess.Dispose();
             _tokenRegistration.Dispose();
-            _logObserverSubscription.Dispose();
-            _logObserver.Dispose();
             try
             {
                 TranscodeDirectory.Delete(recursive: true);
@@ -70,5 +58,11 @@ namespace TVRoom.Broadcast
                 _logger.LogError(ex, "Error deleting transcode directory '{directory}'", TranscodeDirectory.FullName);
             }
         }
+    }
+
+    internal static partial class HlsRegexPatterns
+    {
+        [GeneratedRegex(@"^\[hls @ \S+\] Opening '.*?\.ts'")]
+        public static partial Regex WritingHlsSegment();
     }
 }
