@@ -11,6 +11,7 @@ namespace TVRoom.Tuner
             services.AddHttpClient(TunerClient.TunerHttpClientName, 
                 client => client.BaseAddress = new Uri(tunerAddress));
             services.AddSingleton<TunerClient>();
+            services.AddSingleton<TunerStatusProvider>();
 
             return services;
         }

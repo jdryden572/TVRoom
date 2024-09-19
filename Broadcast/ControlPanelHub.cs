@@ -18,9 +18,14 @@ namespace TVRoom.Broadcast
     {
         private readonly BroadcastManager _broadcastManager;
         private readonly TunerClient _tunerClient;
+        private readonly TunerStatusProvider _tunerStatusProvider;
 
-        public ControlPanelHub(BroadcastManager broadcastManager, TunerClient tunerClient) => 
-            (_broadcastManager, _tunerClient) = (broadcastManager, tunerClient);
+        public ControlPanelHub(BroadcastManager broadcastManager, TunerClient tunerClient, TunerStatusProvider tunerStatusProvider)
+        {
+            _broadcastManager = broadcastManager;
+            _tunerClient = tunerClient;
+            _tunerStatusProvider = tunerStatusProvider;
+        }
 
         public async Task<BroadcastInfo> StartBroadcast(string guideNumber)
         {
@@ -61,7 +66,7 @@ namespace TVRoom.Broadcast
 
         public ChannelReader<TunerStatus[]> GetTunerStatuses(CancellationToken cancellation)
         {
-            return TunerStatusChannelWriter.CreateReader(_tunerClient, cancellation);
+            return ChannelHelper.CreateReader(_tunerStatusProvider, cancellation);
         }
     }
 }

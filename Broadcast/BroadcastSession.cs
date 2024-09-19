@@ -52,17 +52,7 @@ namespace TVRoom.Broadcast
 
         public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe)
         {
-            var channel = Channel.CreateBounded<string>(_debugOutputChannelOptions);
-            var observer = new WriteToChannelObserver(channel.Writer);
-            var unsubscriber = _ffmpegProcess.Subscribe(observer);
-
-            unsubscribe.Register(() =>
-            {
-                unsubscriber.Dispose();
-                observer.Dispose();
-            });
-
-            return channel.Reader;
+            return ChannelHelper.CreateReader(_ffmpegProcess, unsubscribe);
         }
 
         public void Dispose()
