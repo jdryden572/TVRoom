@@ -1,6 +1,8 @@
 ﻿using TVRoom.Configuration;
 using TVRoom.Tuner;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 
 namespace TVRoom.Broadcast
 {
@@ -9,12 +11,16 @@ namespace TVRoom.Broadcast
         private readonly HlsConfiguration _hlsConfig;
         private readonly TranscodeConfigService _transcodeConfigService;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly string _serverAddress;
 
-        public BroadcastSessionFactory(HlsConfiguration hlsConfig, TranscodeConfigService transcodeConfigService, ILoggerFactory loggerFactory)
+        public BroadcastSessionFactory(HlsConfiguration hlsConfig, TranscodeConfigService transcodeConfigService, ILoggerFactory loggerFactory, IServer server)
         {
             _hlsConfig = hlsConfig;
             _transcodeConfigService = transcodeConfigService;
             _loggerFactory = loggerFactory;
+
+            var serverAddressesFeature = server.Features.Get<IServerAddressesFeature>() ?? throw new InvalidOperationException($"Missing feature {nameof(IServerAddressesFeature)}");
+            _serverAddress = serverAddressesFeature.Addresses.FirstOrDefault() ?? throw new InvalidOperationException($"No address returned from {nameof(IServerAddressesFeature)}");
         }
 
         public async Task<BroadcastSession> CreateBroadcast(ChannelInfo channelInfo)
@@ -44,9 +50,9 @@ namespace TVRoom.Broadcast
         {
             var transcodeConfig = await _transcodeConfigService.GetLatestConfig();
 
-            var hlsSettings = $"-f hls -hls_time {_hlsConfig.HlsTime} -hls_list_size {_hlsConfig.HlsListSize} -hls_flags delete_segments";
+            var hlsSettings = $"-f hls -hls_time {_hlsConfig.HlsTime} -hls_list_size {_hlsConfig.HlsListSize}";
 
-            var playlist = Path.Join(transcodeDirectory.FullName, "live.m3u8");
+            var playlist = $"{_serverAddress}/streams/{transcodeDirectory.Name}/live.m3u8";
             return $"-y {RemoveNewLines(transcodeConfig.InputVideoParameters)} -i {input} -c:a aac -ac 2 {RemoveNewLines(transcodeConfig.OutputVideoParameters)} {hlsSettings} -master_pl_name master.m3u8 {playlist}";
         }
 

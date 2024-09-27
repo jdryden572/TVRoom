@@ -1,4 +1,6 @@
-﻿using System.Reactive.Linq;
+﻿using System.Collections.Concurrent;
+using System.Reactive.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 
@@ -15,6 +17,7 @@ namespace TVRoom.Broadcast
         {
             BroadcastInfo = broadcastInfo;
             TranscodeDirectory = transcodeDirectory;
+            HlsLiveStream = new HlsLiveStream(hlsConfig);
             _ffmpegProcess = ffmpegProcess;
             _hlsConfig = hlsConfig;
             _logger = logger;
@@ -26,6 +29,8 @@ namespace TVRoom.Broadcast
         public BroadcastInfo BroadcastInfo { get; }
 
         public DirectoryInfo TranscodeDirectory { get; }
+
+        public HlsLiveStream HlsLiveStream { get; }
 
         public bool IsReady { get; private set; }
 
@@ -49,6 +54,7 @@ namespace TVRoom.Broadcast
         {
             _ffmpegProcess.Dispose();
             _tokenRegistration.Dispose();
+            HlsLiveStream.Dispose();
             try
             {
                 TranscodeDirectory.Delete(recursive: true);

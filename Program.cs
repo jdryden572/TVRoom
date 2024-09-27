@@ -32,6 +32,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Clear();
 });
 
+builder.Services.AddTransient(p => p.GetRequiredService<ILoggerFactory>().CreateLogger("EndpointLogger"));
+
 builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", builder =>
         builder
