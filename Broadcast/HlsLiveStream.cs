@@ -28,10 +28,11 @@ namespace TVRoom.Broadcast
                 throw new ArgumentException("File name must not contain path separators", nameof(fileName));
             }
 
+            Console.WriteLine($"{fileName}: starting");
             var stopwatch = Stopwatch.StartNew();
             var hlsStreamFile = await HlsStreamFile.ReadAsync(fileName, fileContents);
             stopwatch.Stop();
-            //Console.WriteLine($"{fileName}: {hlsStreamFile.Length} bytes ingested in {stopwatch.Elapsed.TotalMilliseconds} ms");
+            Console.WriteLine($"{fileName}: {hlsStreamFile.Length} bytes ingested in {stopwatch.Elapsed.TotalMilliseconds} ms");
 
             await _channel.Writer.WriteAsync(hlsStreamFile);
         }
