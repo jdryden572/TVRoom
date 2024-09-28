@@ -20,7 +20,9 @@ namespace TVRoom.Broadcast
             _loggerFactory = loggerFactory;
 
             var serverAddressesFeature = server.Features.Get<IServerAddressesFeature>() ?? throw new InvalidOperationException($"Missing feature {nameof(IServerAddressesFeature)}");
-            _serverAddress = serverAddressesFeature.Addresses.FirstOrDefault() ?? throw new InvalidOperationException($"No address returned from {nameof(IServerAddressesFeature)}");
+            var serverAddress = serverAddressesFeature.Addresses.FirstOrDefault() ?? throw new InvalidOperationException($"No address returned from {nameof(IServerAddressesFeature)}");
+            var uri = new Uri(serverAddress);
+            _serverAddress = $"{uri.Scheme}://127.0.0.1:{uri.Port}";
         }
 
         public async Task<BroadcastSession> CreateBroadcast(ChannelInfo channelInfo)
