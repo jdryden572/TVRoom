@@ -31,7 +31,7 @@ namespace TVRoom.Broadcast
             var stopwatch = Stopwatch.StartNew();
             var hlsStreamFile = await HlsStreamFile.ReadAsync(fileName, fileContents);
             stopwatch.Stop();
-            Console.WriteLine($"{fileName}: {hlsStreamFile.Length} bytes ingested in {stopwatch.Elapsed.TotalMilliseconds} ms");
+            //Console.WriteLine($"{fileName}: {hlsStreamFile.Length} bytes ingested in {stopwatch.Elapsed.TotalMilliseconds} ms");
 
             await _channel.Writer.WriteAsync(hlsStreamFile);
         }
@@ -266,7 +266,7 @@ namespace TVRoom.Broadcast
             var array = ArrayPool<byte>.Shared.Rent(minimumLength);
             Interlocked.Increment(ref _rentedBufferCount);
             Interlocked.Add(ref _rentedBufferLength, array.LongLength);
-            Report();
+            //Report();
             return array;
         }
 
@@ -275,7 +275,7 @@ namespace TVRoom.Broadcast
             Interlocked.Decrement(ref _rentedBufferCount);
             Interlocked.Add(ref _rentedBufferLength, -1 * array.LongLength);
             ArrayPool<byte>.Shared.Return(array);
-            Report();
+            //Report();
         }
 
         private static void Report()
