@@ -131,6 +131,7 @@ namespace TVRoom.Broadcast
                 throw new ArgumentException("Unrecognized file extension in HLS file!", nameof(fileName));
             }
 
+            HlsStreamFile streamFile;
             while (true)
             {
                 var result = await fileContents.ReadAsync();
@@ -139,11 +140,15 @@ namespace TVRoom.Broadcast
                     var length = (int)result.Buffer.Length;
                     var buffer = FileBufferPool.Rent(length);
                     result.Buffer.CopyTo(buffer);
-                    return new HlsStreamFile(fileName, fileType, buffer, length);
+                    streamFile = new HlsStreamFile(fileName, fileType, buffer, length);
+                    break;
                 }
 
                 fileContents.AdvanceTo(result.Buffer.Start, result.Buffer.End);
             }
+
+            await fileContents.CompleteAsync();
+            return streamFile;
         }
 
         private HlsStreamFile(string fileName, HlsFileType fileType, byte[] buffer, int length)
