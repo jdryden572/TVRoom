@@ -141,6 +141,7 @@ namespace TVRoom.Broadcast
                     var length = (int)result.Buffer.Length;
                     var buffer = FileBufferPool.Rent(length);
                     result.Buffer.CopyTo(buffer);
+                    fileContents.AdvanceTo(result.Buffer.End);
                     streamFile = new HlsStreamFile(fileName, fileType, buffer, length);
                     break;
                 }
