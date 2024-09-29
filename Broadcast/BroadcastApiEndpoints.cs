@@ -6,7 +6,9 @@ namespace TVRoom.Broadcast
     {
         public static IEndpointRouteBuilder MapBroadcastApiEndpoints(this IEndpointRouteBuilder app, IConfiguration configuration)
         {
-            var getMasterPlaylist = app.MapGet("/streams/{sessionId}/master.m3u8", (string sessionId, BroadcastManager broadcastManager) =>
+            var group = app.MapGroup("/streams");
+
+            var getMasterPlaylist = group.MapGet("/{sessionId}/master.m3u8", (string sessionId, BroadcastManager broadcastManager) =>
             {
                 var session = broadcastManager.CurrentSession;
                 if (session is null || session.BroadcastInfo.SessionId != sessionId)
@@ -17,7 +19,7 @@ namespace TVRoom.Broadcast
                 return session.HlsLiveStream.GetMasterPlaylist() ?? Results.NotFound();
             });
 
-            var getPlaylist = app.MapGet("/streams/{sessionId}/live.m3u8", (string sessionId, BroadcastManager broadcastManager) =>
+            var getPlaylist = group.MapGet("/{sessionId}/live.m3u8", (string sessionId, BroadcastManager broadcastManager) =>
             {
                 var session = broadcastManager.CurrentSession;
                 if (session is null || session.BroadcastInfo.SessionId != sessionId)
@@ -28,7 +30,7 @@ namespace TVRoom.Broadcast
                 return session.HlsLiveStream.GetPlaylist() ?? Results.NotFound();
             });
 
-            var getStream = app.MapGet(@"/streams/{sessionId}/{segment:regex(^live\d+\.ts$)}", (string sessionId, string segment, BroadcastManager broadcastManager) =>
+            var getStream = group.MapGet(@"/{sessionId}/{segment:regex(^live\d+\.ts$)}", (string sessionId, string segment, BroadcastManager broadcastManager) =>
             {
                 var session = broadcastManager.CurrentSession;
                 if (session is null || session.BroadcastInfo.SessionId != sessionId)
@@ -39,7 +41,7 @@ namespace TVRoom.Broadcast
                 return session.HlsLiveStream.GetSegment(segment) ?? Results.NotFound(); 
             });
 
-            getStream
+            group
                 .RequireCors("AllowAll")
                 .AllowAnonymous();
 
