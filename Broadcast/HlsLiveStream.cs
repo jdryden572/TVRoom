@@ -1,8 +1,7 @@
-﻿using Microsoft.IO;
+﻿using Microsoft.Toolkit.HighPerformance.Buffers;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading.Channels;
 
@@ -13,7 +12,11 @@ namespace TVRoom.Broadcast
         private readonly HlsConfiguration _hlsConfig; 
         private readonly CancellationTokenSource _cts = new();
         private readonly Channel<HlsStreamFile> _channel = Channel.CreateBounded<HlsStreamFile>(new BoundedChannelOptions(50));
-        private readonly ConcurrentDictionary<string, HlsStreamFile> _files = new();
+        private readonly ConcurrentDictionary<string, HlsStreamFile> _segments = new();
+
+        // Access these with interlocked
+        private HlsStreamFile? _masterPlaylist;
+        private HlsStreamFile? _playlist;
 
         public HlsLiveStream(HlsConfiguration hlsConfig)
         {
@@ -23,11 +26,6 @@ namespace TVRoom.Broadcast
 
         public async Task IngestStreamFileAsync(string fileName, PipeReader fileContents)
         {
-            if (IsInvalidFileName(fileName))
-            {
-                throw new ArgumentException("File name must not contain path separators", nameof(fileName));
-            }
-
             Console.WriteLine($"{fileName}: starting");
             var stopwatch = Stopwatch.StartNew();
             var hlsStreamFile = await HlsStreamFile.ReadAsync(fileName, fileContents);
@@ -37,8 +35,20 @@ namespace TVRoom.Broadcast
             await _channel.Writer.WriteAsync(hlsStreamFile);
         }
 
-        public bool TryGetFile(string fileName, [MaybeNullWhen(false)] out HlsStreamFile hlsStreamFile) =>
-            _files.TryGetValue(fileName, out hlsStreamFile);
+        public IResult? GetMasterPlaylist()
+        {
+            var streamFile = Interlocked.CompareExchange(ref _masterPlaylist, null, null);
+            return streamFile?.GetResult();
+        }
+
+        public IResult? GetPlaylist()
+        {
+            var streamFile = Interlocked.CompareExchange(ref _playlist, null, null);
+            return streamFile?.GetResult();
+        }
+
+        public IResult? GetSegment(string fileName) => 
+            _segments.TryGetValue(fileName, out var streamFile) ? streamFile.GetResult() : null;
 
         private async Task ListenForStreamFilesAsync()
         {
@@ -49,26 +59,26 @@ namespace TVRoom.Broadcast
                 while (!_cts.IsCancellationRequested)
                 {
                     var file = await _channel.Reader.ReadAsync(_cts.Token);
-
-                    if (file.FileType == HlsFileType.Segment)
+                    switch (file.FileType)
                     {
-                        _files.TryAdd(file.FileName, file);
-                        segmentQueue.Enqueue(file);
+                        case HlsFileType.Segment:
+                            _segments.TryAdd(file.FileName, file);
+                            segmentQueue.Enqueue(file);
 
-                        if (segmentQueue.Count > _hlsConfig.HlsListSize + 2)
-                        {
-                            using var toDispose = segmentQueue.Dequeue();
-                            _files.TryRemove(toDispose.FileName, out _);
-                        }
-                    }
-                    else
-                    {
-                        if (_files.TryRemove(file.FileName, out var previousFile))
-                        {
-                            previousFile.Dispose();
-                        }
-
-                        _files.TryAdd(file.FileName, file);
+                            if (segmentQueue.Count > _hlsConfig.HlsListSize + _hlsConfig.HlsDeleteThreshold)
+                            {
+                                using var toDispose = segmentQueue.Dequeue();
+                                _segments.TryRemove(toDispose.FileName, out _);
+                            }
+                            break;
+                        case HlsFileType.MasterPlaylist:
+                            // Swap the value, dispose of the old one 
+                            Interlocked.Exchange(ref _masterPlaylist, file)?.Dispose(); 
+                            break;
+                        case HlsFileType.Playlist:
+                            // Swap the value, dispose of the old one 
+                            Interlocked.Exchange(ref _playlist, file)?.Dispose();
+                            break;
                     }
                 }
             }
@@ -81,16 +91,14 @@ namespace TVRoom.Broadcast
             }
         }
 
-        private static bool IsInvalidFileName(string fileName) => fileName.AsSpan().ContainsAny(Path.GetInvalidFileNameChars());
-
         public void Dispose()
         {
             _cts.Cancel();
             _channel.Writer.Complete();
-            var filesToDispose = _files.Keys.ToArray();
+            var filesToDispose = _segments.Keys.ToArray();
             foreach (var file in filesToDispose)
             {
-                if (_files.TryRemove(file, out var toDispose))
+                if (_segments.TryRemove(file, out var toDispose))
                 {
                     toDispose.Dispose();
                 }
@@ -110,7 +118,7 @@ namespace TVRoom.Broadcast
         private readonly object _lock = new();
 
         // Synchronize access to these with the lock
-        private byte[]? _buffer;
+        private MemoryOwner<byte>? _buffer;
         private int _refCount;
         private bool _disposed;
 
@@ -123,7 +131,7 @@ namespace TVRoom.Broadcast
             var fileType = fileName switch
             {
                 "master.m3u8" => HlsFileType.MasterPlaylist,
-                "live.m3u8" => HlsFileType.MasterPlaylist,
+                "live.m3u8" => HlsFileType.Playlist,
                 _ => HlsFileType.Segment,
             };
 
@@ -132,33 +140,18 @@ namespace TVRoom.Broadcast
                 throw new ArgumentException("Unrecognized file extension in HLS file!", nameof(fileName));
             }
 
-            HlsStreamFile streamFile;
-            while (true)
-            {
-                var result = await fileContents.ReadAsync();
-                if (result.IsCompleted)
-                {
-                    var length = (int)result.Buffer.Length;
-                    var buffer = FileBufferPool.Rent(length);
-                    result.Buffer.CopyTo(buffer);
-                    fileContents.AdvanceTo(result.Buffer.End);
-                    streamFile = new HlsStreamFile(fileName, fileType, buffer, length);
-                    break;
-                }
+            var buffer = await fileContents.PooledReadToEndAsync();
 
-                fileContents.AdvanceTo(result.Buffer.Start, result.Buffer.End);
-            }
-
-            await fileContents.CompleteAsync();
+            var streamFile = new HlsStreamFile(fileName, fileType, buffer);
             return streamFile;
         }
 
-        private HlsStreamFile(string fileName, HlsFileType fileType, byte[] buffer, int length)
+        private HlsStreamFile(string fileName, HlsFileType fileType, MemoryOwner<byte> buffer)
         {
             FileName = fileName;
             FileType = fileType;
-            Length = length;
             _buffer = buffer;
+            Length = buffer.Length;
         }
 
         public IResult GetResult()
@@ -166,13 +159,13 @@ namespace TVRoom.Broadcast
             ReadOnlyMemory<byte> memory;
             lock (_lock)
             {
-                if (_disposed)
+                if (_disposed || _buffer is null)
                 {
                     throw new ObjectDisposedException(FileName);
                 }
 
                 _refCount++;
-                memory = new ReadOnlyMemory<byte>(_buffer, 0, Length);
+                memory = _buffer.Memory;
             }
 
             return new HlsFileResult(this, memory);
@@ -200,7 +193,7 @@ namespace TVRoom.Broadcast
 
         private void ReturnBufferIfDisposedAndRefCountZero()
         {
-            byte[]? bufferToReturn = null;
+            MemoryOwner<byte>? bufferToReturn = null;
             lock (_lock)
             {
                 if (_disposed && _refCount == 0)
@@ -210,10 +203,7 @@ namespace TVRoom.Broadcast
                 }
             }
 
-            if (bufferToReturn is not null)
-            {
-                FileBufferPool.Return(bufferToReturn);
-            }
+            bufferToReturn?.Dispose();
         }
         
 
@@ -238,8 +228,6 @@ namespace TVRoom.Broadcast
 
                 _finished = true;
 
-                var contentType = 
-
                 httpContext.Response.Headers.ContentType = _streamFile.FileType switch
                 {
                     HlsFileType.Segment => "application/octet-stream",
@@ -255,36 +243,6 @@ namespace TVRoom.Broadcast
                     _streamFile.ReaderDisposed();
                 }
             }
-        }
-    }
-
-    public static class FileBufferPool
-    {
-        private static long _rentedBufferCount;
-        private static long _rentedBufferLength;
-
-        public static byte[] Rent(int minimumLength)
-        {
-            var array = ArrayPool<byte>.Shared.Rent(minimumLength);
-            Interlocked.Increment(ref _rentedBufferCount);
-            Interlocked.Add(ref _rentedBufferLength, array.LongLength);
-            //Report();
-            return array;
-        }
-
-        public static void Return(byte[] array)
-        {
-            Interlocked.Decrement(ref _rentedBufferCount);
-            Interlocked.Add(ref _rentedBufferLength, -1 * array.LongLength);
-            ArrayPool<byte>.Shared.Return(array);
-            //Report();
-        }
-
-        private static void Report()
-        {
-            var count = Interlocked.Read(ref _rentedBufferCount);
-            var length = Interlocked.Read(ref _rentedBufferLength) / (1024.0 * 1024.0);
-            Console.WriteLine($"Rented buffers count={count} size={length} MB");
         }
     }
 }

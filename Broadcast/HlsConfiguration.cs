@@ -22,6 +22,7 @@ namespace TVRoom.Broadcast
 
             HlsTime = hlsOptions.HlsTime;
             HlsListSize = hlsOptions.HlsListSize;
+            HlsDeleteThreshold = hlsOptions.HlsDeleteThreshold;
             HlsPlaylistReadyCount = hlsOptions.HlsPlaylistReadyCount;
             ApplicationStopping = appLifetime.ApplicationStopping;
         }
@@ -30,6 +31,7 @@ namespace TVRoom.Broadcast
         public DirectoryInfo BaseTranscodeDirectory { get; }
         public int HlsTime { get; }
         public int HlsListSize { get; }
+        public int HlsDeleteThreshold { get; }
         public int HlsPlaylistReadyCount { get; }
         public CancellationToken ApplicationStopping { get; }
     }
@@ -45,6 +47,11 @@ namespace TVRoom.Broadcast
         public int HlsTime { get; init; } = 2;
 
         public int HlsListSize { get; init; } = 5;
+
+        /// <summary>
+        /// How many unreferenced segments to keep around before deleting them
+        /// </summary>
+        public int HlsDeleteThreshold { get; } = 2;
 
         public int HlsPlaylistReadyCount { get; init; } = 2;
     }

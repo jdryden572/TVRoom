@@ -1,18 +1,12 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.IO;
-using System.IO.Pipelines;
-using System.Text;
-using TVRoom.Helpers;
+﻿using System.IO.Pipelines;
 
 namespace TVRoom.Broadcast
 {
     public static class BroadcastApiEndpoints
     {
-        private static RecyclableMemoryStreamManager _streamManager = new();
-
         public static IEndpointRouteBuilder MapBroadcastApiEndpoints(this IEndpointRouteBuilder app, IConfiguration configuration)
         {
-            var getStream = app.MapGet("/streams/{sessionId}/{*file}", (string sessionId, string file, BroadcastManager broadcastManager) =>
+            var getMasterPlaylist = app.MapGet("/streams/{sessionId}/master.m3u8", (string sessionId, BroadcastManager broadcastManager) =>
             {
                 var session = broadcastManager.CurrentSession;
                 if (session is null || session.BroadcastInfo.SessionId != sessionId)
@@ -20,13 +14,29 @@ namespace TVRoom.Broadcast
                     return Results.NotFound();
                 }
 
-                var extension = Path.GetExtension(file);
-                if (!(extension == ".ts" || extension == ".m3u8") || !session.HlsLiveStream.TryGetFile(file, out var hlsStreamFile))
+                return session.HlsLiveStream.GetMasterPlaylist() ?? Results.NotFound();
+            });
+
+            var getPlaylist = app.MapGet("/streams/{sessionId}/live.m3u8", (string sessionId, BroadcastManager broadcastManager) =>
+            {
+                var session = broadcastManager.CurrentSession;
+                if (session is null || session.BroadcastInfo.SessionId != sessionId)
                 {
                     return Results.NotFound();
                 }
 
-                return hlsStreamFile.GetResult();
+                return session.HlsLiveStream.GetPlaylist() ?? Results.NotFound();
+            });
+
+            var getStream = app.MapGet(@"/streams/{sessionId}/{segment:regex(^live\d+\.ts$)}", (string sessionId, string segment, BroadcastManager broadcastManager) =>
+            {
+                var session = broadcastManager.CurrentSession;
+                if (session is null || session.BroadcastInfo.SessionId != sessionId)
+                {
+                    return Results.NotFound();
+                }
+
+                return session.HlsLiveStream.GetSegment(segment) ?? Results.NotFound(); 
             });
 
             getStream
