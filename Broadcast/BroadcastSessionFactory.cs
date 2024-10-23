@@ -1,28 +1,20 @@
-﻿using TVRoom.Configuration;
-using TVRoom.Tuner;
+﻿using TVRoom.Tuner;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
+using TVRoom.HLS;
 
 namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSessionFactory
     {
+        private readonly FFmpegProcessFactory _ffmpegProcessFactory;
         private readonly HlsConfiguration _hlsConfig;
-        private readonly TranscodeConfigService _transcodeConfigService;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly string _serverAddress;
 
-        public BroadcastSessionFactory(HlsConfiguration hlsConfig, TranscodeConfigService transcodeConfigService, ILoggerFactory loggerFactory, IServer server)
+        public BroadcastSessionFactory(HlsConfiguration hlsConfig, ILoggerFactory loggerFactory, FFmpegProcessFactory ffmpegProcessFactory)
         {
             _hlsConfig = hlsConfig;
-            _transcodeConfigService = transcodeConfigService;
             _loggerFactory = loggerFactory;
-
-            var serverAddressesFeature = server.Features.Get<IServerAddressesFeature>() ?? throw new InvalidOperationException($"Missing feature {nameof(IServerAddressesFeature)}");
-            var serverAddress = serverAddressesFeature.Addresses.FirstOrDefault() ?? throw new InvalidOperationException($"No address returned from {nameof(IServerAddressesFeature)}");
-            var uri = new Uri(serverAddress);
-            _serverAddress = $"{uri.Scheme}://127.0.0.1:{uri.Port}";
+            _ffmpegProcessFactory = ffmpegProcessFactory;
         }
 
         public async Task<BroadcastSession> CreateBroadcast(ChannelInfo channelInfo)
@@ -33,12 +25,9 @@ namespace TVRoom.Broadcast
             // Create a directory to hold the transcoded HLS files
             var folder = _hlsConfig.BaseTranscodeDirectory.CreateSubdirectory(sessionId);
 
-            // Start ffmpeg process
             var logger = _loggerFactory.CreateLogger($"Broadcast-{sessionId}");
-            var arguments = await BuildFFmpegArguments(channelInfo.Url, folder);
-            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, arguments);
-            var process = new FFmpegProcess(_hlsConfig.FFmpeg.FullName, arguments, logger);
-
+            var process = await _ffmpegProcessFactory.Create(channelInfo.Url, folder, logger);
+            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, process.Arguments);
             return new BroadcastSession(broadcastInfo, folder, process, _hlsConfig, logger);
         }
 
@@ -46,22 +35,6 @@ namespace TVRoom.Broadcast
         {
             const string sessionIdCharacters = "abcdefghijklmnopqrstuvwxyz1234567890";
             return RandomNumberGenerator.GetString(sessionIdCharacters, 32);
-        }
-
-        private async Task<string> BuildFFmpegArguments(string input, DirectoryInfo transcodeDirectory)
-        {
-            var transcodeConfig = await _transcodeConfigService.GetLatestConfig();
-
-            var hlsSettings = $"-f hls -hls_time {_hlsConfig.HlsTime} -hls_list_size {_hlsConfig.HlsListSize}";
-
-            var playlist = $"{_serverAddress}/streams/{transcodeDirectory.Name}/live.m3u8";
-            return $"-y {RemoveNewLines(transcodeConfig.InputVideoParameters)} -i {input} -c:a aac -ac 2 {RemoveNewLines(transcodeConfig.OutputVideoParameters)} {hlsSettings} -master_pl_name master.m3u8 {playlist}";
-        }
-
-        private string RemoveNewLines(string input)
-        {
-            var parts = input.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            return string.Join(' ', parts);
         }
     }
 }

@@ -6,6 +6,7 @@ using TVRoom.Tuner;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Vite.AspNetCore.Extensions;
+using TVRoom.HLS;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,8 @@ builder.Services.AddViteServices();
 
 builder.Services.AddGoogleAuthenticationServices(builder.Configuration);
 builder.Services.AddTVRoomAuthorizationServices();
-builder.Services.AddTVRoomBroadcastServices(builder.Configuration);
+builder.Services.AddTVRoomHlsServices(builder.Configuration);
+builder.Services.AddTVRoomBroadcastServices();
 builder.Services.AddTunerServices(builder.Configuration);
 builder.Services.AddConfigurationServices();
 builder.Services.AddDbContext<TVRoomContext>(options =>

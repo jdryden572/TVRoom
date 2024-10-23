@@ -1,4 +1,5 @@
 ﻿using TVRoom.Authorization;
+using TVRoom.HLS;
 
 namespace TVRoom.Broadcast
 {

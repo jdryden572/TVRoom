@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.Options;
 
-namespace TVRoom.Broadcast
+namespace TVRoom.HLS
 {
     public sealed class HlsConfiguration
     {
         public HlsConfiguration(IOptions<HlsTranscodeOptions> options, IHostApplicationLifetime appLifetime)
         {
             var hlsOptions = options.Value;
-            
+
             FFmpeg = new FileInfo(hlsOptions.FFmpegPath);
             if (!FFmpeg.Exists)
             {

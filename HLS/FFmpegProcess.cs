@@ -3,7 +3,7 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
-namespace TVRoom.Broadcast
+namespace TVRoom.HLS
 {
     public class FFmpegProcess : IDisposable
     {
@@ -36,6 +36,8 @@ namespace TVRoom.Broadcast
                 .Merge(_additionalMessages)
                 .TakeUntil(_stopping);
         }
+
+        public string Arguments => _process.StartInfo.Arguments;
 
         public IObservable<string> FFmpegOutput { get; }
 
@@ -141,5 +143,5 @@ namespace TVRoom.Broadcast
             _disposed = true;
             _stopping.OnNext(Unit.Default);
         }
-    }    
+    }
 }
