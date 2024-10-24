@@ -1,6 +1,4 @@
-﻿using System.IO.Pipelines;
-
-namespace TVRoom.Broadcast
+﻿namespace TVRoom.Broadcast
 {
     public static class BroadcastApiEndpoints
     {
@@ -44,25 +42,6 @@ namespace TVRoom.Broadcast
             group
                 .RequireCors("AllowAll")
                 .AllowAnonymous();
-
-            app.MapPut("/streams/{sessionId}/{*file}", async (string sessionId, string file, PipeReader body, BroadcastManager broadcastManager, ILogger logger) =>
-            {
-                var session = broadcastManager.CurrentSession;
-                if (session is null || session.BroadcastInfo.SessionId != sessionId)
-                {
-                    return Results.NotFound();
-                }
-
-                var extension = Path.GetExtension(file);
-                if (IsInvalidFileName(file) || !(extension == ".ts" || extension == ".m3u8"))
-                {
-                    return Results.BadRequest();
-                }
-
-                await session.HlsLiveStream.IngestStreamFileAsync(file, body);
-
-                return Results.NoContent();
-            }).AllowAnonymous();
 
             return app;
         }

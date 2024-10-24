@@ -8,7 +8,8 @@
 
             return services
                 .AddSingleton<HlsConfiguration>()
-                .AddScoped<FFmpegProcessFactory>();
+                .AddSingleton<HlsTranscodeStore>()
+                .AddScoped<HlsTranscodeFactory>();
         }
     }
 }

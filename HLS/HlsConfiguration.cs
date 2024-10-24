@@ -1,10 +1,15 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.Options;
 
 namespace TVRoom.HLS
 {
+    /// <summary>
+    /// Process-global configuration for HLS 
+    /// </summary>
     public sealed class HlsConfiguration
     {
-        public HlsConfiguration(IOptions<HlsTranscodeOptions> options, IHostApplicationLifetime appLifetime)
+        public HlsConfiguration(IOptions<HlsTranscodeOptions> options, IHostApplicationLifetime appLifetime, IServer server)
         {
             var hlsOptions = options.Value;
 
@@ -25,6 +30,11 @@ namespace TVRoom.HLS
             HlsDeleteThreshold = hlsOptions.HlsDeleteThreshold;
             HlsPlaylistReadyCount = hlsOptions.HlsPlaylistReadyCount;
             ApplicationStopping = appLifetime.ApplicationStopping;
+
+            var serverAddressesFeature = server.Features.Get<IServerAddressesFeature>() ?? throw new InvalidOperationException($"Missing feature {nameof(IServerAddressesFeature)}");
+            var serverAddress = serverAddressesFeature.Addresses.FirstOrDefault() ?? throw new InvalidOperationException($"No address returned from {nameof(IServerAddressesFeature)}");
+            var uri = new Uri(serverAddress);
+            HlsIngestBaseAddress = $"{uri.Scheme}://127.0.0.1:{uri.Port}/hls";
         }
 
         public FileInfo FFmpeg { get; }
@@ -34,6 +44,7 @@ namespace TVRoom.HLS
         public int HlsDeleteThreshold { get; }
         public int HlsPlaylistReadyCount { get; }
         public CancellationToken ApplicationStopping { get; }
+        public string HlsIngestBaseAddress { get; }
     }
 
     public class HlsTranscodeOptions
