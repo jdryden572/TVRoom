@@ -32,8 +32,19 @@
     <Folder Include="wwwroot\" />
   </ItemGroup>
 
+  <ItemGroup>
+	<ClientDependency Include="client\**" />
+  </ItemGroup>
+
+  <Target Name="SetMarkerFileProps" BeforeTargets="DebugEnsureNodeEnv;PublishBuildAssets">
+    <PropertyGroup>
+      <NpmRestoredMarkerFile>$(IntermediateOutputPath)NpmRestored.marker</NpmRestoredMarkerFile>
+  	  <ClientBuildMarkerFile>$(IntermediateOutputPath)ClientBuilt.marker</ClientBuildMarkerFile>
+    </PropertyGroup>
+  </Target>
+	
   <!-- Check Node.js is available and install NPM packages -->
-  <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build;PublishBuildAssets" Condition=" !Exists('node_modules') ">
+  <Target Name="DebugEnsureNodeEnv" BeforeTargets="BeforeBuild;PublishBuildAssets" Condition=" !Exists('node_modules') " Inputs="@(ClientDependency)" Outputs="$(NpmRestoredMarkerFile)" >
     <!-- Ensure Node.js is installed -->
     <Exec Command="node --version" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="ErrorCode" />
@@ -43,10 +54,16 @@
 	  <!-- Install Node packages -->
     <Message Importance="high" Text="Restoring dependencies using 'npm'. This may take several minutes..." />
     <Exec Command="npm install" WorkingDirectory="client" />
+	  
+	<!-- Touch marker file to avoid rebuilding this target every time -->
+	<Touch Files="$(NpmRestoredMarkerFile)" AlwaysCreate="true" />
   </Target>
 
 	<!-- Release: Build the final assets -->
-  <Target Name="PublishBuildAssets" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
+  <Target Name="PublishBuildAssets" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Release' " Inputs="@(ClientDependency)" Outputs="$(ClientBuildMarkerFile)" >
     <Exec Command="npm run build" WorkingDirectory="client" />
+
+	<!-- Touch marker file to avoid rebuilding this target every time -->
+	<Touch Files="$(ClientBuildMarkerFile)" AlwaysCreate="true" />
   </Target>
 </Project>
