@@ -23,7 +23,7 @@ namespace TVRoom.Tests
         [TestMethod]
         public async Task ExpectedSequence()
         {
-            var segments = new List<HlsStreamSegment>();
+            var segments = new List<HlsSegmentInfo>();
             _fileIngester!.StreamSegments.Subscribe(segments.Add);
 
             var master = new HlsIngestFile("master.m3u8", HlsFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));
@@ -62,7 +62,7 @@ namespace TVRoom.Tests
         [TestMethod]
         public async Task SkippedSegmentsDisposed()
         {
-            var segments = new List<HlsStreamSegment>();
+            var segments = new List<HlsSegmentInfo>();
             _fileIngester!.StreamSegments.Subscribe(segments.Add);
 
             var master = new HlsIngestFile("master.m3u8", HlsFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));

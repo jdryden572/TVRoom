@@ -19,8 +19,8 @@ namespace TVRoom.HLS
         private HlsMasterPlaylist? _masterPlaylist;
         private HlsStreamPlaylist? _latestStreamPlaylist;
 
-        private readonly Subject<HlsStreamSegment> _streamSegmentSubject = new();
-        public IObservable<HlsStreamSegment> StreamSegments => _streamSegmentSubject.AsObservable();
+        private readonly Subject<HlsSegmentInfo> _streamSegmentSubject = new();
+        public IObservable<HlsSegmentInfo> StreamSegments => _streamSegmentSubject.AsObservable();
 
         public HlsFileIngester()
         {
@@ -84,7 +84,7 @@ namespace TVRoom.HLS
                 if (nextSegment.FileName == latestSegmentRef.FileName)
                 {
                     var segment = _segmentQueue.Dequeue();
-                    var hlsStreamSegment = new HlsStreamSegment(
+                    var hlsStreamSegment = new HlsSegmentInfo(
                         _masterPlaylist.StreamInfo,
                         _latestStreamPlaylist.HlsVersion,
                         _latestStreamPlaylist.TargetDuration,
@@ -110,17 +110,12 @@ namespace TVRoom.HLS
         }
     }
 
-    public sealed record HlsStreamSegment(
+    public sealed record HlsSegmentInfo(
         string StreamInfo,
         int HlsVersion,
         int TargetDuration,
         double Duration,
         HlsSegment Segment);
-
-    public interface IHlsFile
-    {
-        IResult GetResult();
-    }
 
     public sealed class HlsMasterPlaylist
     {
@@ -296,7 +291,7 @@ namespace TVRoom.HLS
         }
     }
 
-    public sealed class HlsSegment : IHlsFile, IDisposable
+    public sealed class HlsSegment : IDisposable
     {
         private readonly object _lock = new();
 
