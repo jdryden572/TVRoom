@@ -1,83 +1,117 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Toolkit.HighPerformance.Buffers;
+﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO.Pipelines;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Channels;
-using TVRoom.Broadcast;
 
 namespace TVRoom.HLS
 {
+    public sealed record HlsIngestFile(string FileName, HlsFileType FileType, MemoryOwner<byte> Payload);
+
     public sealed class HlsFileIngester : IDisposable
     {
-        private readonly Subject<HlsMasterPlaylist> _masterPlaylists = new();
-        private readonly Subject<HlsStreamPlaylist> _variantPlaylists = new();
-        private readonly Subject<HlsSegment> _segments = new();
+        private readonly Channel<HlsIngestFile> _channel = Channel.CreateBounded<HlsIngestFile>(new BoundedChannelOptions(50));
+        private readonly Queue<HlsSegment> _segmentQueue = new();
+        private HlsMasterPlaylist? _masterPlaylist;
+        private HlsStreamPlaylist? _latestStreamPlaylist;
 
-        private readonly Channel<IngestFile> _channel = Channel.CreateBounded<IngestFile>(new BoundedChannelOptions(50));
+        private readonly Subject<HlsStreamSegment> _streamSegmentSubject = new();
+        public IObservable<HlsStreamSegment> StreamSegments => _streamSegmentSubject.AsObservable();
 
         public HlsFileIngester()
         {
-            //_ = Task.Run()
+            _ = Task.Run(ProcessFiles);
         }
 
-        public async Task IngestStreamFileAsync(string fileName, PipeReader fileContentsReader)
+        public async Task IngestStreamFileAsync(HlsIngestFile ingestFile) => await _channel.Writer.WriteAsync(ingestFile);
+
+        private async Task ProcessFiles()
         {
-            var fileType = fileName switch
-            {
-                "master.m3u8" => HlsFileType.MasterPlaylist,
-                "live.m3u8" => HlsFileType.Playlist,
-                _ => HlsFileType.Segment,
-            };
-
-            if (fileType == HlsFileType.Segment && Path.GetExtension(fileName) != ".ts")
-            {
-                throw new ArgumentException("Unrecognized file extension in HLS file!", nameof(fileName));
-            }
-
-            var fileContents = await fileContentsReader.PooledReadToEndAsync();
-            await _channel.Writer.WriteAsync(new IngestFile(fileName, fileType, fileContents));
-        }
-
-        private async Task ListenForFiles()
-        {
+            // Using channel here to ensure we process files one at a time (even if uploaded concurrently)
             await foreach (var file in _channel.Reader.ReadAllAsync())
             {
-                //switch (file.FileType)
-                //{
-                //    case HlsFileType.MasterPlaylist:
-                //        var contents = Encoding.UTF8.GetString(file.FileContents.Span);
+                switch (file.FileType)
+                {
+                    case HlsFileType.MasterPlaylist:
+                        if (HlsMasterPlaylist.TryParse(file.Payload.Span, out var parsedMaster))
+                        {
+                            _masterPlaylist = parsedMaster;
+                        }
 
-                //}
+                        // Return payload buffer to pool
+                        file.Payload.Dispose();
+                        break;
+
+                    case HlsFileType.Playlist:
+                        if (HlsStreamPlaylist.TryParse(file.Payload.Span, out var parsedStreamPlaylist))
+                        {
+                            _latestStreamPlaylist = parsedStreamPlaylist;
+                        }
+
+                        // Return payload buffer to pool
+                        file.Payload.Dispose();
+                        break;
+
+                    case HlsFileType.Segment:
+                        // If there is still a segment in the queue when we get a new one, the previous one
+                        // was unmatched by a playlist entry. We will never publish it, so we must dispose it here.
+                        if (_segmentQueue.TryDequeue(out var unusedSegment))
+                        {
+                            unusedSegment.Dispose();
+                        }
+
+                        _segmentQueue.Enqueue(new HlsSegment(file.FileName, file.Payload));
+                        break;
+                }
+
+                if (_masterPlaylist is null || _latestStreamPlaylist is null || _segmentQueue.Count == 0 || _latestStreamPlaylist.SegmentReferences.Count == 0)
+                {
+                    continue;
+                }
+
+                var latestSegmentRef = _latestStreamPlaylist.SegmentReferences.LastOrDefault();
+
+                var nextSegment = _segmentQueue.Peek();
+                if (nextSegment.FileName == latestSegmentRef.FileName)
+                {
+                    var segment = _segmentQueue.Dequeue();
+                    var hlsStreamSegment = new HlsStreamSegment(
+                        _masterPlaylist.StreamInfo,
+                        _latestStreamPlaylist.HlsVersion,
+                        _latestStreamPlaylist.TargetDuration,
+                        latestSegmentRef.Duration,
+                        segment);
+
+                    _streamSegmentSubject.OnNext(hlsStreamSegment);
+                }
             }
         }
 
         public void Dispose()
         {
-            _masterPlaylists.OnCompleted();
-            _variantPlaylists.OnCompleted();
-            _segments.OnCompleted();
+            _channel.Writer.Complete();
+            _streamSegmentSubject.OnCompleted();
         }
 
-        public IObservable<HlsMasterPlaylist> MasterPlaylists => _masterPlaylists.AsObservable();
-        public IObservable<HlsStreamPlaylist> VariantPlaylists => _variantPlaylists.AsObservable();
-        public IObservable<HlsSegment> Segments => _segments.AsObservable();
-
-        private sealed record IngestFile(string FileName, HlsFileType FileType, MemoryOwner<byte> FileContents);
     }
+
+    public sealed record HlsStreamSegment(
+        string StreamInfo,
+        int HlsVersion,
+        int TargetDuration,
+        double Duration,
+        HlsSegment Segment);
 
     public interface IHlsFile
     {
         IResult GetResult();
     }
 
-    public sealed class HlsMasterPlaylist : IHlsFile
+    public sealed class HlsMasterPlaylist
     {
         public int HlsVersion { get; }
         public string StreamInfo { get; }
@@ -130,22 +164,17 @@ namespace TVRoom.HLS
             parsed = null;
             return false;
         }
-
-        public IResult GetResult()
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public record struct HlsSegmentReference(string FileName, double Duration);
 
-    public sealed class HlsStreamPlaylist : IHlsFile
+    public sealed class HlsStreamPlaylist
     {
         public int HlsVersion { get; }
-        public long TargetDuration { get; }
+        public int TargetDuration { get; }
         public IReadOnlyList<HlsSegmentReference> SegmentReferences { get; }
 
-        private HlsStreamPlaylist(int hlsVersion, long targetDuration, IReadOnlyList<HlsSegmentReference> segmentReferences)
+        private HlsStreamPlaylist(int hlsVersion, int targetDuration, IReadOnlyList<HlsSegmentReference> segmentReferences)
         {
             HlsVersion = hlsVersion;
             TargetDuration = targetDuration;
@@ -155,7 +184,7 @@ namespace TVRoom.HLS
         public static bool TryParse(ReadOnlySpan<byte> payload, [MaybeNullWhen(false)] out HlsStreamPlaylist parsed)
         {
             var version = int.MinValue;
-            var targetDuration = long.MinValue;
+            var targetDuration = int.MinValue;
             var segments = new List<HlsSegmentReference>();
 
             var buffer = ArrayPool<char>.Shared.Rent(payload.Length * 2);
@@ -203,7 +232,7 @@ namespace TVRoom.HLS
                 ArrayPool<char>.Shared.Return(buffer);
             }
 
-            if (version > int.MinValue && targetDuration > long.MinValue)
+            if (version > int.MinValue && targetDuration > int.MinValue)
             {
                 parsed = new HlsStreamPlaylist(version, targetDuration, segments.AsReadOnly());
                 return true;
@@ -226,16 +255,16 @@ namespace TVRoom.HLS
             return false;
         }
 
-        private static bool TryParseTargetDuration(ReadOnlySpan<char> line, out long targetDuration)
+        private static bool TryParseTargetDuration(ReadOnlySpan<char> line, out int targetDuration)
         {
             const string prefix = "#EXT-X-TARGETDURATION:";
-            if (line.StartsWith(prefix) && 
-                long.TryParse(line.Slice(prefix.Length), CultureInfo.InvariantCulture, out targetDuration))
+            if (line.StartsWith(prefix) &&
+                int.TryParse(line.Slice(prefix.Length), CultureInfo.InvariantCulture, out targetDuration))
             {
                 return true;
             }
 
-            targetDuration = long.MinValue;
+            targetDuration = int.MinValue;
             return false;
         }
 
@@ -254,11 +283,6 @@ namespace TVRoom.HLS
             duration = double.MinValue;
             return false;
         }
-
-        public IResult GetResult()
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public sealed class HlsSegment : IHlsFile, IDisposable
@@ -271,19 +295,12 @@ namespace TVRoom.HLS
         private bool _disposed;
 
         public string FileName { get; }
-        public int Length { get; }
+        public int Length => _buffer?.Length ?? 0;
 
-        public static async Task<HlsSegment> ReadAsync(string fileName, PipeReader fileContents)
-        {
-            var buffer = await fileContents.PooledReadToEndAsync();
-            return new HlsSegment(fileName, buffer);
-        }
-
-        private HlsSegment(string fileName, MemoryOwner<byte> buffer)
+        public HlsSegment(string fileName, MemoryOwner<byte> buffer)
         {
             FileName = fileName;
             _buffer = buffer;
-            Length = buffer.Length;
         }
 
         public IResult GetResult()

@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="8.0.7" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7">
@@ -17,7 +18,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.7" />
-    <PackageReference Include="Microsoft.Toolkit.HighPerformance" Version="7.1.2" />
     <PackageReference Include="serilog" Version="4.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
@@ -44,7 +44,7 @@
   </Target>
 	
   <!-- Check Node.js is available and install NPM packages -->
-  <Target Name="DebugEnsureNodeEnv" BeforeTargets="BeforeBuild;PublishBuildAssets" Condition=" !Exists('node_modules') " Inputs="@(ClientDependency)" Outputs="$(NpmRestoredMarkerFile)" >
+  <Target Name="DebugEnsureNodeEnv" BeforeTargets="BeforeBuild;PublishBuildAssets" Condition=" !Exists('node_modules') " Inputs="@(ClientDependency)" Outputs="$(NpmRestoredMarkerFile)">
     <!-- Ensure Node.js is installed -->
     <Exec Command="node --version" ContinueOnError="true">
       <Output TaskParameter="ExitCode" PropertyName="ErrorCode" />
@@ -60,7 +60,7 @@
   </Target>
 
 	<!-- Release: Build the final assets -->
-  <Target Name="PublishBuildAssets" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Release' " Inputs="@(ClientDependency)" Outputs="$(ClientBuildMarkerFile)" >
+  <Target Name="PublishBuildAssets" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Release' " Inputs="@(ClientDependency)" Outputs="$(ClientBuildMarkerFile)">
     <Exec Command="npm run build" WorkingDirectory="client" />
 
 	<!-- Touch marker file to avoid rebuilding this target every time -->

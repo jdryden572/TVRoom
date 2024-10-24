@@ -1,7 +1,9 @@
-﻿using TVRoom.HLS;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TVRoom.HLS;
 
 namespace TVRoom.Tests
 {
+
     [TestClass]
     public class HlsMasterPlaylistTests
     {
