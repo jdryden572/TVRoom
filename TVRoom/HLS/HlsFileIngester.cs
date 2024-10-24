@@ -66,6 +66,11 @@ namespace TVRoom.HLS
 
                         _segmentQueue.Enqueue(new HlsSegment(file.FileName, file.Payload));
                         break;
+
+                    default:
+                        // Return payload buffer to pool
+                        file.Payload.Dispose();
+                        break;
                 }
 
                 if (_masterPlaylist is null || _latestStreamPlaylist is null || _segmentQueue.Count == 0 || _latestStreamPlaylist.SegmentReferences.Count == 0)
@@ -89,14 +94,20 @@ namespace TVRoom.HLS
                     _streamSegmentSubject.OnNext(hlsStreamSegment);
                 }
             }
+
+            // Dispose any segments we haven't processed
+            while (_segmentQueue.TryDequeue(out var segment))
+            {
+                segment.Dispose();
+            }
+
+            _streamSegmentSubject.OnCompleted();
         }
 
         public void Dispose()
         {
             _channel.Writer.Complete();
-            _streamSegmentSubject.OnCompleted();
         }
-
     }
 
     public sealed record HlsStreamSegment(

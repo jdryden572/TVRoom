@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Reactive.Linq;
 using TVRoom.HLS;
 
@@ -15,13 +16,15 @@ namespace TVRoom.Tests
                 live.m3u8
                 """u8.ToArray();
 
-        private readonly HlsFileIngester _fileIngester = new();
+        private HlsFileIngester? _fileIngester = new();
+
+        public void TestCleanup() => _fileIngester?.Dispose();
 
         [TestMethod]
         public async Task ExpectedSequence()
         {
             var segments = new List<HlsStreamSegment>();
-            _fileIngester.StreamSegments.Subscribe(segments.Add);
+            _fileIngester!.StreamSegments.Subscribe(segments.Add);
 
             var master = new HlsIngestFile("master.m3u8", HlsFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));
             await _fileIngester.IngestStreamFileAsync(master);
@@ -60,7 +63,7 @@ namespace TVRoom.Tests
         public async Task SkippedSegmentsDisposed()
         {
             var segments = new List<HlsStreamSegment>();
-            _fileIngester.StreamSegments.Subscribe(segments.Add);
+            _fileIngester!.StreamSegments.Subscribe(segments.Add);
 
             var master = new HlsIngestFile("master.m3u8", HlsFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));
             await _fileIngester.IngestStreamFileAsync(master);
@@ -97,6 +100,31 @@ namespace TVRoom.Tests
             Assert.AreEqual(1.5015, segment.Duration);
             Assert.AreEqual(secondSegment.FileName, segment.Segment.FileName);
             Assert.AreEqual(secondSegment.Payload.Length, segment.Segment.Length);
+        }
+
+        [TestMethod]
+        public async Task CompletesWhenDisposed()
+        {
+            var completionTask = _fileIngester!.StreamSegments.LastOrDefaultAsync();
+            _fileIngester.Dispose();
+            Assert.IsNull(await completionTask);
+        }
+
+        [TestMethod]
+        public async Task DisposesUnusedSegmentsWhenDisposed()
+        {
+            var firstSegment = new HlsIngestFile("live_oops.ts", HlsFileType.Segment, GetPayload("To be disposed...!"u8));
+            await _fileIngester!.IngestStreamFileAsync(firstSegment);
+
+            var secondSegment = new HlsIngestFile("live0.ts", HlsFileType.Segment, GetPayload("To be disposed...!"u8));
+            await _fileIngester!.IngestStreamFileAsync(secondSegment);
+
+            var completion = _fileIngester.StreamSegments.LastOrDefaultAsync();
+            _fileIngester!.Dispose();
+            await completion;
+
+            Assert.IsTrue(firstSegment.Payload.IsDisposed());
+            Assert.IsTrue(secondSegment.Payload.IsDisposed());
         }
 
         private MemoryOwner<byte> GetPayload(ReadOnlySpan<byte> data)
