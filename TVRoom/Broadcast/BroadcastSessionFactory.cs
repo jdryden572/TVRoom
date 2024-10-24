@@ -6,15 +6,15 @@ namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSessionFactory
     {
-        private readonly HlsTranscodeFactory _ffmpegProcessFactory;
+        private readonly HlsTranscodeManager _transcodeManager;
         private readonly HlsConfiguration _hlsConfig;
         private readonly ILoggerFactory _loggerFactory;
 
-        public BroadcastSessionFactory(HlsConfiguration hlsConfig, ILoggerFactory loggerFactory, HlsTranscodeFactory ffmpegProcessFactory)
+        public BroadcastSessionFactory(HlsConfiguration hlsConfig, ILoggerFactory loggerFactory, HlsTranscodeManager transcodeManager)
         {
             _hlsConfig = hlsConfig;
             _loggerFactory = loggerFactory;
-            _ffmpegProcessFactory = ffmpegProcessFactory;
+            _transcodeManager = transcodeManager;
         }
 
         public async Task<BroadcastSession> CreateBroadcast(ChannelInfo channelInfo)
@@ -26,7 +26,7 @@ namespace TVRoom.Broadcast
             var folder = _hlsConfig.BaseTranscodeDirectory.CreateSubdirectory(sessionId);
 
             var logger = _loggerFactory.CreateLogger($"Broadcast-{sessionId}");
-            var process = await _ffmpegProcessFactory.Create(channelInfo.Url, logger);
+            var process = await _transcodeManager.CreateTranscode(channelInfo.Url, logger);
             var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, process.FFmpegProcess.Arguments);
             return new BroadcastSession(broadcastInfo, folder, process, _hlsConfig, logger);
         }

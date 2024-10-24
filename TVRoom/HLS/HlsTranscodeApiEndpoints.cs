@@ -7,9 +7,9 @@ namespace TVRoom.HLS
     {
         public static IEndpointRouteBuilder MapHlsTranscodeApiEndpoints(this IEndpointRouteBuilder app, IConfiguration configuration)
         {
-            app.MapPut("/hls/{transcodeId}/{*file}", async (string transcodeId, string file, PipeReader body, HlsTranscodeStore transcodeStore, ILogger logger) =>
+            app.MapPut("/hls/{transcodeId}/{*file}", async (string transcodeId, string file, PipeReader body, HlsTranscodeManager transcodeManager, ILogger logger) =>
             {
-                if (!transcodeStore.TryGetTranscode(transcodeId, out var transcode))
+                if (!transcodeManager.TryGetTranscode(transcodeId, out var transcode))
                 {
                     return Results.NotFound();
                 }

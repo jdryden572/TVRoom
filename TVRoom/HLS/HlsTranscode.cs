@@ -5,13 +5,13 @@ namespace TVRoom.HLS
 {
     public sealed class HlsTranscode : IDisposable
     {
-        private readonly HlsTranscodeStore _store;
+        private readonly HlsTranscodeManager _transcodeManager;
         private readonly HlsConfiguration _hlsConfig;
         private readonly ILogger _logger;
 
-        public HlsTranscode(HlsTranscodeStore store, HlsConfiguration hlsConfig, ILogger logger, string input, TranscodeConfigDto transcodeConfig)
+        public HlsTranscode(HlsTranscodeManager transcodeManager, HlsConfiguration hlsConfig, ILogger logger, string input, TranscodeConfigDto transcodeConfig)
         {
-            _store = store;
+            _transcodeManager = transcodeManager;
             _hlsConfig = hlsConfig;
             _logger = logger;
             Id = GenerateTranscodeId();
@@ -21,7 +21,7 @@ namespace TVRoom.HLS
             var arguments = $"-y {RemoveNewLines(transcodeConfig.InputVideoParameters)} -i {input} -c:a aac -ac 2 {RemoveNewLines(transcodeConfig.OutputVideoParameters)} {hlsSettings} -master_pl_name master.m3u8 {playlist}";
 
             FFmpegProcess = new FFmpegProcess(_hlsConfig.FFmpeg.FullName, arguments, logger);
-            //FileIngester = new();
+            FileIngester = new();
             HlsLiveStream = new(_hlsConfig);
         }
 
@@ -31,7 +31,7 @@ namespace TVRoom.HLS
 
         public HlsLiveStream HlsLiveStream { get; }
 
-        //public HlsFileIngester FileIngester { get; }
+        public HlsFileIngester FileIngester { get; }
 
         public void Start()
         {
@@ -61,7 +61,7 @@ namespace TVRoom.HLS
         public void Dispose()
         {
             FFmpegProcess.Dispose();
-            _store.Remove(Id);
+            _transcodeManager.Remove(Id);
         }
     }
 }
