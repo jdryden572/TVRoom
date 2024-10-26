@@ -7,13 +7,15 @@ namespace TVRoom.HLS
     public sealed class HlsTranscodeManager
     {
         private readonly ConcurrentDictionary<string, HlsTranscode> _transcodes = new();
-        private readonly TranscodeConfigService _transcodeConfigService;
+        private readonly IServiceProvider _serviceProvider;
         private readonly HlsConfiguration _hlsConfig;
+        private readonly TranscodeConfigService _transcodeConfigService;
 
-        public HlsTranscodeManager(TranscodeConfigService transcodeConfigService, HlsConfiguration hlsConfig)
+        public HlsTranscodeManager(IServiceProvider serviceProvider, HlsConfiguration hlsConfig, TranscodeConfigService transcodeConfigService)
         {
-            _transcodeConfigService = transcodeConfigService;
+            _serviceProvider = serviceProvider;
             _hlsConfig = hlsConfig;
+            _transcodeConfigService = transcodeConfigService;
         }
 
         public async Task<HlsTranscode> CreateTranscode(string channelUrl, ILogger logger)

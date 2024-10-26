@@ -20,7 +20,17 @@ namespace TVRoom.HLS
                     return Results.BadRequest();
                 }
 
-                await transcode.HlsLiveStream.IngestStreamFileAsync(file, body);
+                var fileType = file switch
+                {
+                    "master.m3u8" => IngestFileType.MasterPlaylist,
+                    "live.m3u8" => IngestFileType.Playlist,
+                    _ => IngestFileType.Segment,
+                };
+
+                var payload = await body.PooledReadToEndAsync();
+                var ingestFile = new IngestHlsFile(file, fileType, payload);
+
+                await transcode.FileIngester.IngestStreamFileAsync(ingestFile);
 
                 return Results.NoContent();
             }).AllowAnonymous();

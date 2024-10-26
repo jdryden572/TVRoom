@@ -14,7 +14,7 @@
                     return Results.NotFound();
                 }
 
-                return session.HlsLiveStream.GetMasterPlaylist() ?? Results.NotFound();
+                return session.HlsLiveStream.GetMasterPlaylist();
             });
 
             var getPlaylist = group.MapGet("/{sessionId}/live.m3u8", (string sessionId, BroadcastManager broadcastManager) =>
@@ -25,10 +25,10 @@
                     return Results.NotFound();
                 }
 
-                return session.HlsLiveStream.GetPlaylist() ?? Results.NotFound();
+                return session.HlsLiveStream.GetPlaylist();
             });
 
-            var getStream = group.MapGet(@"/{sessionId}/{segment:regex(^live\d+\.ts$)}", (string sessionId, string segment, BroadcastManager broadcastManager) =>
+            var getStream = group.MapGet(@"/{sessionId}/live{index}.ts", (string sessionId, int index, BroadcastManager broadcastManager) =>
             {
                 var session = broadcastManager.CurrentSession;
                 if (session is null || session.BroadcastInfo.SessionId != sessionId)
@@ -36,7 +36,7 @@
                     return Results.NotFound();
                 }
 
-                return session.HlsLiveStream.GetSegment(segment) ?? Results.NotFound(); 
+                return session.HlsLiveStream.GetSegment(index); 
             });
 
             group

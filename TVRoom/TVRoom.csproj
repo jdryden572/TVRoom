@@ -5,8 +5,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>15f810fa-da60-41b9-ad12-372f7f18bf0e</UserSecretsId>
-	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-	<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +19,7 @@
     <PackageReference Include="serilog" Version="4.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <PackageReference Include="Utf8StringInterpolation" Version="1.3.1" />
     <PackageReference Include="Vite.AspNetCore" Version="1.12.0" />
   </ItemGroup>
 

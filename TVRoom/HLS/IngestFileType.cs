@@ -1,6 +1,6 @@
 ﻿namespace TVRoom.HLS
 {
-    public enum HlsFileType
+    public enum IngestFileType
     {
         MasterPlaylist,
         Playlist,

@@ -6,25 +6,32 @@ namespace TVRoom.Broadcast
 {
     public sealed class BroadcastHistoryService
     {
-        private readonly TVRoomContext _context;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        public BroadcastHistoryService(TVRoomContext context) => _context = context;
+        public BroadcastHistoryService(IServiceScopeFactory serviceScopeFactory)
+        {
+            _serviceScopeFactory = serviceScopeFactory;
+        }
 
         public async Task StartNewBroadcast(ChannelInfo channel)
         {
-            _context.BroadcastSessionRecords.Add(new BroadcastSessionRecord
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TVRoomContext>();
+            context.BroadcastSessionRecords.Add(new BroadcastSessionRecord
             {
                 GuideNumber = channel.GuideNumber,
                 GuideName = channel.GuideName,
                 Url = channel.Url,
                 StartedAt = DateTime.UtcNow,
             });
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         public async Task<BroadcastSessionRecord?> GetLatestBroadcast()
         {
-            return await _context.BroadcastSessionRecords
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TVRoomContext>();
+            return await context.BroadcastSessionRecords
                 .AsNoTracking()
                 .OrderByDescending(r => r.Id)
                 .FirstOrDefaultAsync();
@@ -32,14 +39,16 @@ namespace TVRoom.Broadcast
 
         public async Task EndCurrentBroadcast()
         {
-            var latest = await _context.BroadcastSessionRecords
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TVRoomContext>();
+            var latest = await context.BroadcastSessionRecords
                 .OrderByDescending(r => r.Id)
                 .FirstOrDefaultAsync();
 
             if (latest != null && latest.EndedAt is null)
             {
                 latest.EndedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
         }
     }

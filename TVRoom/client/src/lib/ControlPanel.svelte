@@ -96,6 +96,12 @@
                     </svg>
                     <span>Stop broadcast</span>
                 </button>
+                <button class="restart-transcode" on:click={() => client.restartTranscode()}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path stroke="none" d="M4,11V4L6.34351,6.34351A7.99832,7.99832,0,1,1,4.252,14H6.3432A6.00471,6.00471,0,1,0,7.7597,7.75977L11,11Z"/>
+                    </svg>
+                    <span>Restart transcode</span>
+                </button>
             </div>
         </div>
     {/if}
@@ -181,6 +187,22 @@
         align-items: center;
         gap: 0.5em;
         margin-top: 1em;
+    }
+
+    .restart-transcode {
+        color: rgb(172, 172, 172);
+        background-color: transparent;
+        border: 1px solid;
+        padding-inline: 0.5em 1em;
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        margin-top: 1em;
+        transition: color 150ms ease;
+    }
+
+    .restart-transcode:hover {
+        color: white;
     }
     
     .configuration {

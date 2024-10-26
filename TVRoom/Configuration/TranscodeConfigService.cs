@@ -5,13 +5,19 @@ namespace TVRoom.Configuration
 {
     public sealed class TranscodeConfigService
     {
-        private readonly TVRoomContext _context;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public TranscodeConfigService(TVRoomContext context) => _context = context;
+        public TranscodeConfigService(IServiceScopeFactory scopeFactory)
+        {
+            _scopeFactory = scopeFactory;
+        }
+
 
         public async Task<TranscodeConfigDto> GetLatestConfig()
         {
-            var config = await _context.TranscodeConfigs.OrderByDescending(c => c.Id).FirstOrDefaultAsync();
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TVRoomContext>();
+            var config = await context.TranscodeConfigs.OrderByDescending(c => c.Id).FirstOrDefaultAsync();
             if (config is null)
             {
                 return new TranscodeConfigDto
@@ -32,6 +38,8 @@ namespace TVRoom.Configuration
 
         public async Task SaveNewConfig(TranscodeConfigDto config)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<TVRoomContext>();
             var persistedConfig = new TranscodeConfig
             {
                 CreatedAt = DateTime.UtcNow,
@@ -39,8 +47,8 @@ namespace TVRoom.Configuration
                 InputVideoParameters = config.InputVideoParameters,
                 OutputVideoParameters = config.OutputVideoParameters,
             };
-            _context.TranscodeConfigs.Add(persistedConfig);
-            await _context.SaveChangesAsync();
+            context.TranscodeConfigs.Add(persistedConfig);
+            await context.SaveChangesAsync();
         }
     }
 }

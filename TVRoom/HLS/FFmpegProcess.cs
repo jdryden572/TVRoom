@@ -29,23 +29,26 @@ namespace TVRoom.HLS
             _process.EnableRaisingEvents = true;
             _process.Exited += OnExited;
 
-            FFmpegOutput = Observable.FromEventPattern<DataReceivedEventHandler, DataReceivedEventArgs>(
+            _ffmpegOutput = Observable.FromEventPattern<DataReceivedEventHandler, DataReceivedEventArgs>(
                     h => _process.ErrorDataReceived += h,
                     h => _process.ErrorDataReceived -= h)
                 .Select(e => e.EventArgs.Data ?? string.Empty)
                 .Merge(_additionalMessages)
-                .TakeUntil(_stopping);
+                .TakeUntil(_stopping)
+                .Publish();
         }
 
         public string Arguments => _process.StartInfo.Arguments;
 
-        public IObservable<string> FFmpegOutput { get; }
+        private readonly IConnectableObservable<string> _ffmpegOutput;
+        public IObservable<string> FFmpegOutput => _ffmpegOutput;
 
         public void Start()
         {
             _logger.LogInformation("Starting ffmpeg process: {ffmpegPath} {arguments}", _process.StartInfo.FileName, _process.StartInfo.Arguments);
             _process.Start();
             _process.BeginErrorReadLine();
+            _ffmpegOutput.Connect();
         }
 
         public async Task StopAsync()

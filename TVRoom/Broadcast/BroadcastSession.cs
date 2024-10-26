@@ -7,59 +7,43 @@ namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSession : IDisposable
     {
-        private readonly HlsTranscode _hlsTranscode;
         private readonly HlsConfiguration _hlsConfig;
         private readonly ILogger _logger;
         private readonly CancellationTokenRegistration _tokenRegistration;
 
-        public BroadcastSession(BroadcastInfo broadcastInfo, DirectoryInfo transcodeDirectory, HlsTranscode hlsTranscode, HlsConfiguration hlsConfig, ILogger logger)
+        public BroadcastSession(BroadcastInfo broadcastInfo, HlsLiveStream liveStream, HlsConfiguration hlsConfig, ILogger logger)
         {
             BroadcastInfo = broadcastInfo;
-            TranscodeDirectory = transcodeDirectory;
-            _hlsTranscode = hlsTranscode;
+            HlsLiveStream = liveStream;
             _hlsConfig = hlsConfig;
             _logger = logger;
             _tokenRegistration = _hlsConfig.ApplicationStopping.Register(Dispose);
-
-            _hlsTranscode.FFmpegProcess.FFmpegOutput.WriteTranscodeLogsToFile(broadcastInfo, hlsConfig);
         }
 
         public BroadcastInfo BroadcastInfo { get; }
 
-        public DirectoryInfo TranscodeDirectory { get; }
-
-        public HlsLiveStream HlsLiveStream => _hlsTranscode.HlsLiveStream;
+        public HlsLiveStream HlsLiveStream { get; }
 
         public bool IsReady { get; private set; }
 
         public async Task StartAndWaitForReadyAsync()
         {
-            var waitForReady = _hlsTranscode.FFmpegProcess.FFmpegOutput
+            var waitForReady = HlsLiveStream.DebugOutput
                 .Where(line => HlsRegexPatterns.WritingHlsSegment().IsMatch(line))
                 .Take(_hlsConfig.HlsPlaylistReadyCount)
                 .Count();
 
-            _hlsTranscode.Start();
+            await HlsLiveStream.StartAsync();
             await waitForReady;
             IsReady = true;
         }
 
-        public async Task StopAsync() => await _hlsTranscode.StopAsync();
-
-        public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe) => _hlsTranscode.FFmpegProcess.FFmpegOutput.AsChannelReader(unsubscribe);
+        public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe) => HlsLiveStream.DebugOutput.AsChannelReader(unsubscribe);
 
         public void Dispose()
         {
-            _hlsTranscode.Dispose();
+            HlsLiveStream.Dispose();
             _tokenRegistration.Dispose();
-            try
-            {
-                TranscodeDirectory.Delete(recursive: true);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting transcode directory '{directory}'", TranscodeDirectory.FullName);
-            }
         }
     }
 

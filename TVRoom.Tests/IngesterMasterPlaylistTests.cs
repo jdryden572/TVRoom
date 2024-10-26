@@ -5,7 +5,7 @@ namespace TVRoom.Tests
 {
 
     [TestClass]
-    public class HlsMasterPlaylistTests
+    public class IngesterMasterPlaylistTests
     {
         [TestMethod]
         public void TryParse_ValidInput()
@@ -18,7 +18,7 @@ namespace TVRoom.Tests
                 live.m3u8
                 """u8.ToArray();
 
-            Assert.IsTrue(HlsMasterPlaylist.TryParse(validMasterPlaylist, out var master));
+            Assert.IsTrue(IngestMasterPlaylist.TryParse(validMasterPlaylist, out var master));
             Assert.AreEqual(3, master.HlsVersion);
             Assert.AreEqual("BANDWIDTH=6740800,RESOLUTION=1280x720,CODECS=\"avc1.4d002a,mp4a.40.2\"", master.StreamInfo);
         }
@@ -33,7 +33,7 @@ namespace TVRoom.Tests
                 live.m3u8
                 """u8.ToArray();
 
-            Assert.IsFalse(HlsMasterPlaylist.TryParse(missingVersion, out _));
+            Assert.IsFalse(IngestMasterPlaylist.TryParse(missingVersion, out _));
         }
 
         [TestMethod]
@@ -46,7 +46,7 @@ namespace TVRoom.Tests
                 live.m3u8
                 """u8.ToArray();
 
-            Assert.IsFalse(HlsMasterPlaylist.TryParse(missingStreamInfo, out _));
+            Assert.IsFalse(IngestMasterPlaylist.TryParse(missingStreamInfo, out _));
         }
 
         [TestMethod]
@@ -62,7 +62,7 @@ namespace TVRoom.Tests
                 live2.m3u8
                 """u8.ToArray();
 
-            Assert.IsTrue(HlsMasterPlaylist.TryParse(multipleStreams, out var master));
+            Assert.IsTrue(IngestMasterPlaylist.TryParse(multipleStreams, out var master));
             Assert.AreEqual(3, master.HlsVersion);
             Assert.AreEqual("BANDWIDTH=6740800,RESOLUTION=1280x720,CODECS=\"avc1.4d002a,mp4a.40.2\"", master.StreamInfo);
         }

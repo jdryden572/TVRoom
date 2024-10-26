@@ -11,7 +11,6 @@ namespace TVRoom.Broadcast
 
         public static async Task<MemoryOwner<byte>> PooledReadToEndAsync(this PipeReader reader)
         {
-            await Console.Out.WriteLineAsync($"array poool: {_largePool.GetHashCode()}");
             try
             {
                 while (true)

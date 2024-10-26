@@ -94,6 +94,15 @@ class ControlPanelClient {
         }
     }
 
+    public async restartTranscode() {
+        try {
+            await this.connection.invoke('RestartTranscode');
+        }
+        catch (err) {
+            console.error(err);
+        }
+    }
+
     public subscribeToDebugOutput(onValue: (msg: string) => void) : ISubscription<any> {
         return this.connection.stream('GetDebugOutput')
             .subscribe({

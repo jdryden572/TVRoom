@@ -5,8 +5,8 @@
         public static IServiceCollection AddTVRoomBroadcastServices(this IServiceCollection services)
         {
             return services
-                .AddScoped<BroadcastSessionFactory>()
-                .AddScoped<BroadcastHistoryService>()
+                .AddSingleton<BroadcastSessionFactory>()
+                .AddSingleton<BroadcastHistoryService>()
                 .AddSingleton<BroadcastManager>();
         }
     }

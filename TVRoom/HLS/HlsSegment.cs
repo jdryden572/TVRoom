@@ -1,11 +1,9 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Diagnostics;
-using System.IO.Pipelines;
-using TVRoom.Broadcast;
 
 namespace TVRoom.HLS
 {
-    public sealed class HlsStreamFile : IDisposable
+    public sealed class HlsSegment : IDisposable
     {
         private readonly object _lock = new();
 
@@ -15,35 +13,12 @@ namespace TVRoom.HLS
         private bool _disposed;
 
         public string FileName { get; }
-        public HlsFileType FileType { get; }
-        public int Length { get; }
+        public int Length => _buffer?.Length ?? 0;
 
-        public static async Task<HlsStreamFile> ReadAsync(string fileName, PipeReader fileContents)
-        {
-            var fileType = fileName switch
-            {
-                "master.m3u8" => HlsFileType.MasterPlaylist,
-                "live.m3u8" => HlsFileType.Playlist,
-                _ => HlsFileType.Segment,
-            };
-
-            if (fileType == HlsFileType.Segment && Path.GetExtension(fileName) != ".ts")
-            {
-                throw new ArgumentException("Unrecognized file extension in HLS file!", nameof(fileName));
-            }
-
-            var buffer = await fileContents.PooledReadToEndAsync();
-
-            var streamFile = new HlsStreamFile(fileName, fileType, buffer);
-            return streamFile;
-        }
-
-        private HlsStreamFile(string fileName, HlsFileType fileType, MemoryOwner<byte> buffer)
+        public HlsSegment(string fileName, MemoryOwner<byte> buffer)
         {
             FileName = fileName;
-            FileType = fileType;
             _buffer = buffer;
-            Length = buffer.Length;
         }
 
         public IResult GetResult()
@@ -60,7 +35,7 @@ namespace TVRoom.HLS
                 memory = _buffer.Memory;
             }
 
-            return new HlsFileResult(this, memory);
+            return new HlsSegmentResult(this, memory);
         }
 
         public void Dispose()
@@ -74,9 +49,9 @@ namespace TVRoom.HLS
         }
 
 #if DEBUG
-        ~HlsStreamFile()
+        ~HlsSegment()
         {
-            Debug.Fail($"Stream file is being finalized! {FileType} '{FileName}'");
+            Debug.Fail($"HlsSegement is being finalized! '{FileName}'");
         }
 #endif
 
@@ -110,15 +85,15 @@ namespace TVRoom.HLS
         }
 
 
-        private sealed class HlsFileResult : IResult
+        private sealed class HlsSegmentResult : IResult
         {
-            private readonly HlsStreamFile _streamFile;
+            private readonly HlsSegment _hlsSegment;
             private readonly ReadOnlyMemory<byte> _buffer;
             private bool _finished;
 
-            public HlsFileResult(HlsStreamFile streamFile, ReadOnlyMemory<byte> buffer)
+            public HlsSegmentResult(HlsSegment hlsSegment, ReadOnlyMemory<byte> buffer)
             {
-                _streamFile = streamFile;
+                _hlsSegment = hlsSegment;
                 _buffer = buffer;
             }
 
@@ -126,16 +101,12 @@ namespace TVRoom.HLS
             {
                 if (_finished)
                 {
-                    throw new InvalidOperationException("Cannot execute HlsFileResult more than once!");
+                    throw new InvalidOperationException("Cannot execute HlsSegmentResult more than once!");
                 }
 
                 _finished = true;
 
-                httpContext.Response.Headers.ContentType = _streamFile.FileType switch
-                {
-                    HlsFileType.Segment => "application/octet-stream",
-                    _ => "audio/mpegurl",
-                };
+                httpContext.Response.Headers.ContentType = "application/octet-stream";
 
                 try
                 {
@@ -143,7 +114,7 @@ namespace TVRoom.HLS
                 }
                 finally
                 {
-                    _streamFile.ReaderDisposed();
+                    _hlsSegment.ReaderDisposed();
                 }
             }
         }

@@ -8,8 +8,7 @@
 
             return services
                 .AddSingleton<HlsConfiguration>()
-                .AddSingleton<HlsTranscodeManager>()
-                .AddScoped<HlsTranscodeFactory>();
+                .AddSingleton<HlsTranscodeManager>();
         }
     }
 }

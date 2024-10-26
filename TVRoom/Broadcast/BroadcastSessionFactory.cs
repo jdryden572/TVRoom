@@ -17,18 +17,15 @@ namespace TVRoom.Broadcast
             _transcodeManager = transcodeManager;
         }
 
-        public async Task<BroadcastSession> CreateBroadcast(ChannelInfo channelInfo)
+        public BroadcastSession CreateBroadcast(ChannelInfo channelInfo)
         {
             // Generate unique session and save broadcast info (usable to watch the stream)
             var sessionId = GenerateSessionId();
 
-            // Create a directory to hold the transcoded HLS files
-            var folder = _hlsConfig.BaseTranscodeDirectory.CreateSubdirectory(sessionId);
-
             var logger = _loggerFactory.CreateLogger($"Broadcast-{sessionId}");
-            var process = await _transcodeManager.CreateTranscode(channelInfo.Url, logger);
-            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, process.FFmpegProcess.Arguments);
-            return new BroadcastSession(broadcastInfo, folder, process, _hlsConfig, logger);
+            var liveStream = new HlsLiveStream(channelInfo.Url, _transcodeManager, logger, _hlsConfig);
+            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId);
+            return new BroadcastSession(broadcastInfo, liveStream, _hlsConfig, logger);
         }
 
         private string GenerateSessionId()

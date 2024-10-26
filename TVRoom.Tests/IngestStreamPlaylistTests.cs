@@ -3,9 +3,8 @@ using TVRoom.HLS;
 
 namespace TVRoom.Tests
 {
-
     [TestClass]
-    public class HlsStreamPlaylistTests
+    public class IngestStreamPlaylistTests
     {
         [TestMethod]
         public void TryParse_ValidInput()
@@ -26,15 +25,15 @@ namespace TVRoom.Tests
                 live3.ts
                 """u8.ToArray();
 
-            Assert.IsTrue(HlsStreamPlaylist.TryParse(validPlaylistFile, out var playlist));
+            Assert.IsTrue(IngestStreamPlaylist.TryParse(validPlaylistFile, out var playlist));
             Assert.AreEqual(3, playlist.HlsVersion);
             Assert.AreEqual(3, playlist.TargetDuration);
             var expected = new[]
             {
-                new HlsSegmentReference("live0.ts", 1.5015),
-                new HlsSegmentReference("live1.ts", 3.003),
-                new HlsSegmentReference("live2.ts", 3.003),
-                new HlsSegmentReference("live3.ts", 3.003),
+                new IngestSegmentReference("live0.ts", 1.5015),
+                new IngestSegmentReference("live1.ts", 3.003),
+                new IngestSegmentReference("live2.ts", 3.003),
+                new IngestSegmentReference("live3.ts", 3.003),
             };
 
             CollectionAssert.AreEqual(expected, playlist.SegmentReferences.ToArray());
@@ -54,7 +53,7 @@ namespace TVRoom.Tests
                 live1.ts
                 """u8.ToArray();
 
-            Assert.IsFalse(HlsStreamPlaylist.TryParse(noVersion, out _));
+            Assert.IsFalse(IngestStreamPlaylist.TryParse(noVersion, out _));
         }
 
         [TestMethod]
@@ -71,7 +70,7 @@ namespace TVRoom.Tests
                 live1.ts
                 """u8.ToArray();
 
-            Assert.IsFalse(HlsStreamPlaylist.TryParse(noTargetDuration, out _));
+            Assert.IsFalse(IngestStreamPlaylist.TryParse(noTargetDuration, out _));
         }
 
         [TestMethod]
@@ -92,13 +91,13 @@ namespace TVRoom.Tests
                 live3.ts
                 """u8.ToArray();
 
-            Assert.IsTrue(HlsStreamPlaylist.TryParse(someInvalidSegments, out var playlist));
+            Assert.IsTrue(IngestStreamPlaylist.TryParse(someInvalidSegments, out var playlist));
             Assert.AreEqual(3, playlist.HlsVersion);
             Assert.AreEqual(3, playlist.TargetDuration);
             var expected = new[]
             {
-                new HlsSegmentReference("live0.ts", 1.5015),
-                new HlsSegmentReference("live3.ts", 3.003),
+                new IngestSegmentReference("live0.ts", 1.5015),
+                new IngestSegmentReference("live3.ts", 3.003),
             };
 
             CollectionAssert.AreEqual(expected, playlist.SegmentReferences.ToArray());

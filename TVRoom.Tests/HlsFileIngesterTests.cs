@@ -26,10 +26,10 @@ namespace TVRoom.Tests
             var segments = new List<HlsSegmentInfo>();
             _fileIngester!.StreamSegments.Subscribe(segments.Add);
 
-            var master = new HlsIngestFile("master.m3u8", HlsFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));
+            var master = new IngestHlsFile("master.m3u8", IngestFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));
             await _fileIngester.IngestStreamFileAsync(master);
 
-            var firstPlaylist = new HlsIngestFile("live.m3u8", HlsFileType.Playlist, GetPayload(
+            var firstPlaylist = new IngestHlsFile("live.m3u8", IngestFileType.Playlist, GetPayload(
                 """
                 #EXTM3U
                 #EXT-X-VERSION:3
@@ -40,7 +40,7 @@ namespace TVRoom.Tests
                 """u8));
             await _fileIngester.IngestStreamFileAsync(firstPlaylist);
 
-            var firstSegment = new HlsIngestFile("live0.ts", HlsFileType.Segment, GetPayload("SomePayload!"u8));
+            var firstSegment = new IngestHlsFile("live0.ts", IngestFileType.Segment, GetPayload("SomePayload!"u8));
             await _fileIngester.IngestStreamFileAsync(firstSegment);
             var segment = await _fileIngester.StreamSegments
                 .Timeout(TimeSpan.FromSeconds(1))
@@ -65,17 +65,17 @@ namespace TVRoom.Tests
             var segments = new List<HlsSegmentInfo>();
             _fileIngester!.StreamSegments.Subscribe(segments.Add);
 
-            var master = new HlsIngestFile("master.m3u8", HlsFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));
+            var master = new IngestHlsFile("master.m3u8", IngestFileType.MasterPlaylist, GetPayload(_validMasterPlaylist));
             await _fileIngester.IngestStreamFileAsync(master);
 
             // wrong name
-            var firstSegment = new HlsIngestFile("live_oops.ts", HlsFileType.Segment, GetPayload("To be disposed...!"u8));
+            var firstSegment = new IngestHlsFile("live_oops.ts", IngestFileType.Segment, GetPayload("To be disposed...!"u8));
             await _fileIngester.IngestStreamFileAsync(firstSegment);
 
-            var secondSegment = new HlsIngestFile("live0.ts", HlsFileType.Segment, GetPayload("SomePayload!"u8));
+            var secondSegment = new IngestHlsFile("live0.ts", IngestFileType.Segment, GetPayload("SomePayload!"u8));
             await _fileIngester.IngestStreamFileAsync(secondSegment);
 
-            var firstPlaylist = new HlsIngestFile("live.m3u8", HlsFileType.Playlist, GetPayload(
+            var firstPlaylist = new IngestHlsFile("live.m3u8", IngestFileType.Playlist, GetPayload(
                 """
                 #EXTM3U
                 #EXT-X-VERSION:3
@@ -113,10 +113,10 @@ namespace TVRoom.Tests
         [TestMethod]
         public async Task DisposesUnusedSegmentsWhenDisposed()
         {
-            var firstSegment = new HlsIngestFile("live_oops.ts", HlsFileType.Segment, GetPayload("To be disposed...!"u8));
+            var firstSegment = new IngestHlsFile("live_oops.ts", IngestFileType.Segment, GetPayload("To be disposed...!"u8));
             await _fileIngester!.IngestStreamFileAsync(firstSegment);
 
-            var secondSegment = new HlsIngestFile("live0.ts", HlsFileType.Segment, GetPayload("To be disposed...!"u8));
+            var secondSegment = new IngestHlsFile("live0.ts", IngestFileType.Segment, GetPayload("To be disposed...!"u8));
             await _fileIngester!.IngestStreamFileAsync(secondSegment);
 
             var completion = _fileIngester.StreamSegments.LastOrDefaultAsync();

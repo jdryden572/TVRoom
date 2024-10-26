@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using TVRoom.Broadcast;
 using TVRoom.Configuration;
 
 namespace TVRoom.HLS
@@ -21,15 +22,13 @@ namespace TVRoom.HLS
             var arguments = $"-y {RemoveNewLines(transcodeConfig.InputVideoParameters)} -i {input} -c:a aac -ac 2 {RemoveNewLines(transcodeConfig.OutputVideoParameters)} {hlsSettings} -master_pl_name master.m3u8 {playlist}";
 
             FFmpegProcess = new FFmpegProcess(_hlsConfig.FFmpeg.FullName, arguments, logger);
+            //FFmpegProcess.FFmpegOutput.WriteTranscodeLogsToFile(broadcastInfo, hlsConfig);
             FileIngester = new();
-            HlsLiveStream = new(_hlsConfig);
         }
 
         public string Id { get; }
 
         public FFmpegProcess FFmpegProcess { get; }
-
-        public HlsLiveStream HlsLiveStream { get; }
 
         public HlsFileIngester FileIngester { get; }
 

@@ -4,7 +4,7 @@
     {
         public static IServiceCollection AddConfigurationServices(this IServiceCollection services)
         {
-            services.AddScoped<TranscodeConfigService>();
+            services.AddSingleton<TranscodeConfigService>();
             return services;
         }
 

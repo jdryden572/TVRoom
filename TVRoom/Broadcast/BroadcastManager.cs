@@ -1,24 +1,28 @@
 ﻿using TVRoom.Tuner;
 using Microsoft.AspNetCore.SignalR;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace TVRoom.Broadcast
 {
 
     public sealed class BroadcastManager : IDisposable
     {
-        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly BroadcastSessionFactory _sessionFactory;
+        private readonly BroadcastHistoryService _historyService;
         private readonly IHubContext<ControlPanelHub, IControlPanelClient> _controlPanelHub;
         private readonly ILogger _logger;
         private BroadcastSession? _currentSession;
 
         public BroadcastManager(
-            IServiceScopeFactory serviceScopeFactory,
             IHubContext<ControlPanelHub, IControlPanelClient> controlPanelHub,
-            ILogger<BroadcastManager> logger)
+            ILogger<BroadcastManager> logger,
+            BroadcastSessionFactory sessionFactory,
+            BroadcastHistoryService historyService)
         {
-            _serviceScopeFactory = serviceScopeFactory;
             _controlPanelHub = controlPanelHub;
             _logger = logger;
+            _sessionFactory = sessionFactory;
+            _historyService = historyService;
         }
 
         public BroadcastSession? CurrentSession => _currentSession;
@@ -33,15 +37,9 @@ namespace TVRoom.Broadcast
                 throw new InvalidOperationException("Cannot start broadcast when another is already active!");
             }
 
-            BroadcastSession session;
-            using (var scope = _serviceScopeFactory.CreateScope())
-            {
-                var sessionFactory = scope.ServiceProvider.GetRequiredService<BroadcastSessionFactory>();
-                session = await sessionFactory.CreateBroadcast(channelInfo);
+            var session = _sessionFactory.CreateBroadcast(channelInfo);
 
-                var historyService = scope.ServiceProvider.GetRequiredService<BroadcastHistoryService>();
-                await historyService.StartNewBroadcast(channelInfo);
-            }
+            await _historyService.StartNewBroadcast(channelInfo);
 
             _currentSession = session;
             await _controlPanelHub.Clients.All.BroadcastStarted(session.BroadcastInfo);
@@ -65,34 +63,33 @@ namespace TVRoom.Broadcast
 
         public async Task<ChannelInfo?> GetLastChannel()
         {
-            using (var scope = _serviceScopeFactory.CreateScope())
+            var latest = await _historyService.GetLatestBroadcast();
+            if (latest is null)
             {
-                var historyService = scope.ServiceProvider.GetRequiredService<BroadcastHistoryService>();
-                var latest = await historyService.GetLatestBroadcast();
-                if (latest is null)
-                {
-                    return null;
-                }
-
-                return new ChannelInfo(latest.GuideNumber, latest.GuideName, latest.Url);
+                return null;
             }
+
+            return new ChannelInfo(latest.GuideNumber, latest.GuideName, latest.Url);
         }
 
         public async Task StopSessionAsync()
         {
             if (_currentSession is not null)
             {
-                await _currentSession.StopAsync();
+                await _currentSession.HlsLiveStream.StopAsync();
                 _currentSession.Dispose();
                 _currentSession = null;
 
-                using (var scope = _serviceScopeFactory.CreateScope())
-                {
-                    var historyService = scope.ServiceProvider.GetRequiredService<BroadcastHistoryService>();
-                    await historyService.EndCurrentBroadcast();
-                }
-
+                await _historyService.EndCurrentBroadcast();
                 await _controlPanelHub.Clients.All.BroadcastStopped();
+            }
+        }
+
+        public async Task RestartTranscode()
+        {
+            if (_currentSession is not null)
+            {
+                await _currentSession.HlsLiveStream.RestartAsync();
             }
         }
 
