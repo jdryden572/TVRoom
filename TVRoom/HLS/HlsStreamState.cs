@@ -1,153 +1,204 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
+using System.Globalization;
 using Utf8StringInterpolation;
 
 namespace TVRoom.HLS
 {
-    public sealed record HlsStreamState(
+    public abstract record HlsStreamState
+    {
+        protected readonly int _hlsListSize;
+
+        public HlsStreamState(int hlsListSize)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(hlsListSize, 2);
+            _hlsListSize = hlsListSize;
+        }
+
+        public abstract HlsStreamState WithNewSegment(HlsSegmentInfo segmentInfo);
+        public abstract HlsStreamState WithNewDiscontinuity();
+
+        // Intentionally not using IDisposable pattern here, so
+        // it doesn't imply the objects should always be disposed.
+        public virtual void DisposeAllSegments()
+        {
+        }
+
+        public abstract IResult GetMasterPlaylist();
+        public abstract IResult GetPlaylist();
+        public abstract IResult GetSegment(int index);
+    }
+
+    public sealed record HlsStreamNotReady(int HlsListSize) : HlsStreamState(HlsListSize)
+    {
+        public override HlsStreamState WithNewDiscontinuity()
+        {
+            return this;
+        }
+
+        public override HlsStreamState WithNewSegment(HlsSegmentInfo segmentInfo)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(HlsListSize, 2);
+
+            var segment = new HlsSegmentEntry(0, segmentInfo.Duration, segmentInfo.Payload);
+            return new HlsStreamWithSegments(
+                _hlsListSize,
+                segmentInfo.StreamInfo,
+                segmentInfo.HlsVersion,
+                segmentInfo.TargetDuration,
+                new HlsSegmentQueue(HlsListSize).Push(segment, out _),
+                new HlsSegmentQueue(HlsListSize));
+        }
+
+        public override IResult GetMasterPlaylist() => Results.NotFound();
+        public override IResult GetPlaylist() => Results.NotFound();
+        public override IResult GetSegment(int index) => Results.NotFound();
+    }
+
+    public sealed record HlsStreamWithSegments(
+        int HlsListSize,
         string StreamInfo,
         int HlsVersion,
         double TargetDuration,
-        int MediaSequence,
-        FixedQueue<HlsPlaylistEntry> LiveEntries,
-        FixedQueue<HlsPlaylistEntry> PreviousSegments)
+        HlsSegmentQueue LiveSegments,
+        HlsSegmentQueue PreviousSegments) : HlsStreamState(HlsListSize)
     {
-        public static HlsStreamState GetNextState(HlsStreamState? previous, HlsSegmentInfo segmentInfo, int hlsListSize)
+        public override HlsStreamState WithNewDiscontinuity()
         {
-            if (previous is null)
+            var lastSegment = LiveSegments[^1];
+            return this with
             {
-                var segment = new HlsSegmentPlaylistEntry(0, segmentInfo.Duration, segmentInfo.Segment);
-                return new HlsStreamState(
-                    segmentInfo.StreamInfo,
-                    segmentInfo.HlsVersion,
-                    segmentInfo.TargetDuration,
-                    MediaSequence: 0,
-                    new FixedQueue<HlsPlaylistEntry>(hlsListSize).Push(segment, out _),
-                    new FixedQueue<HlsPlaylistEntry>(hlsListSize));
-            }
+                LiveSegments = LiveSegments.ReplaceLast(lastSegment.WithDiscontinuity()),
+            };
+        }
 
-            var lastIndex = previous.Segments.LastOrDefault()?.Index ?? -1;
-            var newSegment = new HlsSegmentPlaylistEntry(lastIndex + 1, segmentInfo.Duration, segmentInfo.Segment);
+        public override HlsStreamState WithNewSegment(HlsSegmentInfo segmentInfo)
+        {
+            var latestIndex = LiveSegments[^1].Index;
+            var newSegmentEntry = new HlsSegmentEntry(latestIndex + 1, segmentInfo.Duration, segmentInfo.Payload);
 
-            var entries = previous.LiveEntries.Push(newSegment, out var moveToPrevious);
-            var previousEntries = previous.PreviousSegments;
+            var newLiveSegments = LiveSegments.Push(newSegmentEntry, out var moveToPrevious);
+            var newPreviousSegments = PreviousSegments;
             if (moveToPrevious is not null)
             {
-                previousEntries = previousEntries.Push(moveToPrevious, out var toBeDisposed);
-                toBeDisposed?.Dispose();
+                newPreviousSegments = PreviousSegments.Push(moveToPrevious, out var toBeDisposed);
+                toBeDisposed?.Payload.Dispose();
             }
 
-            var newStream = previous with
+            var newStreamState = this with
             {
-                MediaSequence = entries.OfType<HlsSegmentPlaylistEntry>().First().Index,
-                LiveEntries = entries,
-                PreviousSegments = previousEntries,
+                LiveSegments = newLiveSegments,
+                PreviousSegments = newPreviousSegments,
             };
 
-            return newStream;
+            return newStreamState;
         }
 
-        public static HlsStreamState GetNextStateForDiscontinuity(HlsStreamState previous, int hlsListSize)
-        {
-            var newEntry = new HlsDiscontinuityPlaylistEntry();
+        public int MediaSequence => LiveSegments[0].Index;
 
-            var entries = previous.LiveEntries.Push(newEntry, out var moveToPrevious);
-            var previousEntries = previous.PreviousSegments;
-            if (moveToPrevious is not null)
+        public override void DisposeAllSegments()
+        {
+            foreach (var segment in LiveSegments)
             {
-                previousEntries = previousEntries.Push(moveToPrevious, out var toBeDisposed);
-                toBeDisposed?.Dispose();
+                segment.Payload.Dispose();
             }
 
-            var newStream = previous with
+            foreach (var segment in PreviousSegments)
             {
-                MediaSequence = entries.OfType<HlsSegmentPlaylistEntry>().First().Index,
-                LiveEntries = entries,
-                PreviousSegments = previousEntries,
-            };
-
-            return newStream;
-        }
-
-        private IEnumerable<HlsSegmentPlaylistEntry> Segments => LiveEntries.OfType<HlsSegmentPlaylistEntry>();
-
-        public void WriteMasterPlaylist(IBufferWriter<byte> writer)
-        {
-            using (new InvariantContext())
-            {
-                Utf8String.Format(writer,
-                    $"""
-                    #EXTM3U
-                    #EXT-X-VERSION:{HlsVersion}
-                    #EXT-X-STREAM-INF:{StreamInfo}
-                    live.m3u8
-                    """);
+                segment.Payload.Dispose();
             }
         }
 
-        public void WriteStreamPlaylist(IBufferWriter<byte> writer)
-        {
-            using (new InvariantContext())
-            {
-                Utf8String.Format(writer,
-                    $"""
-                    #EXTM3U
-                    #EXT-X-VERSION:{HlsVersion}
-                    #EXT-X-TARGETDURATION:{TargetDuration}
-                    #EXT-X-MEDIA-SEQUENCE:{MediaSequence}
-                    """);
-            }
+        public override IResult GetMasterPlaylist() => new MasterPlaylistResult(this);
 
-            foreach (var entry in LiveEntries)
-            {
-                entry.WriteTo(writer);
-            }
+        public override IResult GetPlaylist() => new StreamPlaylistResult(this);
+
+        public override IResult GetSegment(int index)
+        {
+            var segment = LiveSegments.FirstOrDefault(i => i.Index == index) ?? 
+                PreviousSegments.FirstOrDefault(i => i.Index == index);
+
+            return segment is not null ? 
+                new SegmentResult(segment.Payload.Rent()) : 
+                Results.NotFound();
         }
 
-        public IResult GetSegmentResult(int index)
+        private sealed record MasterPlaylistResult(HlsStreamWithSegments state) : IResult
         {
-            foreach (var entry in LiveEntries)
+            public async Task ExecuteAsync(HttpContext httpContext)
             {
-                if (entry is HlsSegmentPlaylistEntry segmentEntry && segmentEntry.Index == index)
+                httpContext.Response.Headers.ContentType = "audio/mpegurl";
+
+                using (new CultureContext(CultureInfo.InvariantCulture))
                 {
-                    return segmentEntry.Segment.GetResult();
+                    Utf8String.Format(httpContext.Response.BodyWriter,
+                        $"""
+                        #EXTM3U
+                        #EXT-X-VERSION:{state.HlsVersion}
+                        #EXT-X-STREAM-INF:{state.StreamInfo}
+                        live.m3u8
+                        """);
                 }
-            }
 
-            foreach (var entry in PreviousSegments)
+                await httpContext.Response.BodyWriter.FlushAsync();
+            }
+        }
+
+        private sealed record StreamPlaylistResult(HlsStreamWithSegments state) : IResult
+        {
+            public async Task ExecuteAsync(HttpContext httpContext)
             {
-                if (entry is HlsSegmentPlaylistEntry segmentEntry && segmentEntry.Index == index)
-                {
-                    return segmentEntry.Segment.GetResult();
-                }
-            }
+                httpContext.Response.Headers.ContentType = "audio/mpegurl";
 
-            return Results.NotFound();
+                using (new CultureContext(CultureInfo.InvariantCulture))
+                {
+                    var writer = httpContext.Response.BodyWriter;
+                    Utf8String.Format(writer,
+                         $"""
+                        #EXTM3U
+                        #EXT-X-VERSION:{state.HlsVersion}
+                        #EXT-X-TARGETDURATION:{state.TargetDuration}
+                        #EXT-X-MEDIA-SEQUENCE:{state.MediaSequence}
+                        """);
+
+                    foreach (var segment in state.LiveSegments)
+                    {
+                        segment.WriteTo(writer);
+                    }
+                }
+
+                await httpContext.Response.BodyWriter.FlushAsync();
+            }
+        }
+
+        private sealed record SegmentResult(IBufferLease lease) : IResult
+        {
+            public async Task ExecuteAsync(HttpContext httpContext)
+            {
+                httpContext.Response.Headers.ContentType = "application/octet-stream";
+                await httpContext.Response.BodyWriter.WriteAsync(lease.GetMemory());
+            }
         }
     }
 
-    public abstract record HlsPlaylistEntry : IDisposable
+    public record HlsSegmentEntry(int Index, double Duration, SharedBuffer Payload)
     {
-        public abstract void WriteTo(IBufferWriter<byte> writer);
+        public HlsSegmentFollowedByDiscontinuity WithDiscontinuity() => 
+            new HlsSegmentFollowedByDiscontinuity(Index, Duration, Payload);
 
-        public virtual void Dispose() { }
+        public virtual void WriteTo(IBufferWriter<byte> writer)
+        {
+            Utf8String.Format(writer, $"\r\n#EXTINF:{Duration:N6},\r\nlive{Index}.ts");
+        }
     }
 
-    public sealed record HlsSegmentPlaylistEntry(int Index, double Duration, HlsSegment Segment) : HlsPlaylistEntry
+    public sealed record HlsSegmentFollowedByDiscontinuity(int Index, double Duration, SharedBuffer Payload) 
+        : HlsSegmentEntry(Index, Duration, Payload)
     {
         public override void WriteTo(IBufferWriter<byte> writer)
         {
-            using (new InvariantContext())
-            {
-                Utf8String.Format(writer, $"\r\n#EXTINF:{Duration:N6},\r\nlive{Index}.ts");
-            }
-        }
-
-        public override void Dispose() => Segment.Dispose();
-    }
-
-    public sealed record HlsDiscontinuityPlaylistEntry : HlsPlaylistEntry
-    {
-        public override void WriteTo(IBufferWriter<byte> writer) =>
+            base.WriteTo(writer);
             writer.Write("\r\n#EXT-X-DISCONTINUITY"u8);
+        }
     }
 }

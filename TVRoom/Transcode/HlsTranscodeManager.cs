@@ -2,7 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using TVRoom.Configuration;
 
-namespace TVRoom.HLS
+namespace TVRoom.Transcode
 {
     public sealed class HlsTranscodeManager
     {

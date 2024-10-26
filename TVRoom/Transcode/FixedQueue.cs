@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace TVRoom.HLS
+namespace TVRoom.Transcode
 {
     public readonly struct FixedQueue<T> : IReadOnlyList<T>
     {

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 
-namespace TVRoom.HLS
+namespace TVRoom.Transcode
 {
     /// <summary>
     /// Process-global configuration for HLS 

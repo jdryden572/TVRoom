@@ -1,112 +1,51 @@
-﻿using System.Buffers;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using TVRoom.Transcode;
 
 namespace TVRoom.HLS
 {
     public sealed class HlsLiveStream : IDisposable
     {
-        private readonly string _channelUrl;
-        private readonly HlsTranscodeManager _transcodeManager;
-        private readonly ILogger _logger;
-        private readonly HlsConfiguration _hlsConfiguration;
-        private readonly BehaviorSubject<HlsStreamState?> _streamState = new(null);
-        private HlsTranscode? _currentTranscode;
-        private IDisposable? _unsubscribeSegments;
+        private readonly BehaviorSubject<IObservable<HlsSegmentInfo>> _sources;
+        private readonly BehaviorSubject<HlsStreamState> _streamStates;
+        private readonly IDisposable _unsubscribeToSources;
 
-        private HlsStreamState? CurrentStream => _streamState.Value;
+        private HlsStreamState StreamState => _streamStates.Value;
 
-        public HlsLiveStream(string channelUrl, HlsTranscodeManager transcodeManager, ILogger logger, HlsConfiguration hlsConfiguration)
+        public HlsLiveStream(IObservable<HlsSegmentInfo> source, HlsConfiguration hlsConfig)
         {
-            _channelUrl = channelUrl;
-            _transcodeManager = transcodeManager;
-            _logger = logger;
-            _hlsConfiguration = hlsConfiguration;
-            var debugOutput = _transcodeOutputs.Switch().Publish();
-            debugOutput.Connect();
-            DebugOutput = debugOutput;
-        }
+            _sources = new(source);
+            _streamStates = new(new HlsStreamNotReady(hlsConfig.HlsListSize));
 
-        private readonly Subject<IObservable<string>> _transcodeOutputs = new();
-
-        public IObservable<string> DebugOutput { get; }
-
-        public async Task StartAsync()
-        {
-            if (_currentTranscode is not null)
+            _unsubscribeToSources = _sources.Switch().Subscribe(segmentInfo =>
             {
-                return;
-            }
-
-            var transcode = await _transcodeManager.CreateTranscode(_channelUrl, _logger);
-            _unsubscribeSegments = transcode.FileIngester.StreamSegments
-                .Select(segmentInfo => HlsStreamState.GetNextState(CurrentStream, segmentInfo, _hlsConfiguration.HlsListSize))
-                .Subscribe(_streamState);
-            _transcodeOutputs.OnNext(transcode.FFmpegProcess.FFmpegOutput);
-            transcode.Start();
-            _currentTranscode = transcode;
+                var newState = _streamStates.Value.WithNewSegment(segmentInfo);
+                _streamStates.OnNext(newState);
+            });
         }
 
-        public async Task RestartAsync()
+        public void SetNewSource(IObservable<HlsSegmentInfo> source)
         {
-            if (_currentTranscode is not null)
-            {
-                await _currentTranscode.StopAsync();
-                _currentTranscode.Dispose();
-                _currentTranscode = null;
-                _unsubscribeSegments?.Dispose();
-                _unsubscribeSegments = null;
-
-                var stream = CurrentStream;
-                if (stream is not null)
-                {
-                    _streamState.OnNext(HlsStreamState.GetNextStateForDiscontinuity(stream, _hlsConfiguration.HlsListSize));
-                }
-
-                await StartAsync();
-            }
+            _streamStates.OnNext(_streamStates.Value.WithNewDiscontinuity());
+            _sources.OnNext(source);
         }
 
-        public async Task StopAsync()
-        {
-            if (_currentTranscode is not null)
-            {
-                await _currentTranscode.StopAsync();
-            }
-        }
+        public IResult GetMasterPlaylist() => StreamState.GetMasterPlaylist();
 
-        public IResult GetMasterPlaylist()
-        {
-            var stream = CurrentStream;
-            return stream is not null ? new PlaylistResult(stream.WriteMasterPlaylist) : Results.NotFound();
-        }
+        public IResult GetPlaylist() => StreamState.GetPlaylist();
 
-        public IResult GetPlaylist()
-        {
-            var stream = CurrentStream;
-            return stream is not null ? new PlaylistResult(stream.WriteStreamPlaylist) : Results.NotFound();
-        }
-
-        public IResult GetSegment(int index)
-        {
-            var stream = CurrentStream;
-            return stream?.GetSegmentResult(index) ?? Results.NotFound();
-        }
-
+        public IResult GetSegment(int index) => StreamState.GetSegment(index);
 
         public void Dispose()
         {
-            _currentTranscode?.Dispose();
-        }
-    }
+            // Add new subscriber that will dispose of any further segments from the source.
+            _sources.SelectMany(s => s).Subscribe(segmentInfo => segmentInfo.Payload.Dispose());
 
-    public sealed record PlaylistResult(Action<IBufferWriter<byte>> write) : IResult
-    {
-        public async Task ExecuteAsync(HttpContext httpContext)
-        {
-            httpContext.Response.Headers.ContentType = "audio/mpegurl";
-            write(httpContext.Response.BodyWriter);
-            await httpContext.Response.BodyWriter.FlushAsync();
+            // Stop our subscription
+            _unsubscribeToSources.Dispose();
+
+            // Clean up any segments in our stream state
+            StreamState.DisposeAllSegments();
         }
     }
 }

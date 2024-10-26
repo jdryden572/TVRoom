@@ -1,9 +1,9 @@
-﻿namespace TVRoom.HLS
+﻿namespace TVRoom.Transcode
 {
     public sealed record HlsSegmentInfo(
         string StreamInfo,
         int HlsVersion,
         int TargetDuration,
         double Duration,
-        SharedBuffer Payload);
+        HlsSegment Segment);
 }

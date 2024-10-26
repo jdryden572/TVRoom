@@ -4,7 +4,7 @@ using System.Buffers;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
-using TVRoom.HLS;
+using TVRoom.Transcode;
 
 namespace TVRoom.Tests
 {

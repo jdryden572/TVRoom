@@ -1,10 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TVRoom.HLS;
 
-namespace TVRoom.Tests
+namespace TVRoom.Tests.HLS
 {
     [TestClass]
-    public class IngestStreamPlaylistTests
+    public class ParsedStreamPlaylistTests
     {
         [TestMethod]
         public void TryParse_ValidInput()
@@ -25,7 +25,7 @@ namespace TVRoom.Tests
                 live3.ts
                 """u8.ToArray();
 
-            Assert.IsTrue(IngestStreamPlaylist.TryParse(validPlaylistFile, out var playlist));
+            Assert.IsTrue(ParsedStreamPlaylist.TryParse(validPlaylistFile, out var playlist));
             Assert.AreEqual(3, playlist.HlsVersion);
             Assert.AreEqual(3, playlist.TargetDuration);
             var expected = new[]
@@ -53,7 +53,7 @@ namespace TVRoom.Tests
                 live1.ts
                 """u8.ToArray();
 
-            Assert.IsFalse(IngestStreamPlaylist.TryParse(noVersion, out _));
+            Assert.IsFalse(ParsedStreamPlaylist.TryParse(noVersion, out _));
         }
 
         [TestMethod]
@@ -70,7 +70,21 @@ namespace TVRoom.Tests
                 live1.ts
                 """u8.ToArray();
 
-            Assert.IsFalse(IngestStreamPlaylist.TryParse(noTargetDuration, out _));
+            Assert.IsFalse(ParsedStreamPlaylist.TryParse(noTargetDuration, out _));
+        }
+
+        [TestMethod]
+        public void TryParse_InvalidInput_NoSegments()
+        {
+            var noTargetDuration =
+                """
+                #EXTM3U
+                #EXT-X-VERSION:3
+                #EXT-X-TARGETDURATION:3
+                #EXT-X-MEDIA-SEQUENCE:0
+                """u8.ToArray();
+
+            Assert.IsFalse(ParsedStreamPlaylist.TryParse(noTargetDuration, out _));
         }
 
         [TestMethod]
@@ -91,7 +105,7 @@ namespace TVRoom.Tests
                 live3.ts
                 """u8.ToArray();
 
-            Assert.IsTrue(IngestStreamPlaylist.TryParse(someInvalidSegments, out var playlist));
+            Assert.IsTrue(ParsedStreamPlaylist.TryParse(someInvalidSegments, out var playlist));
             Assert.AreEqual(3, playlist.HlsVersion);
             Assert.AreEqual(3, playlist.TargetDuration);
             var expected = new[]

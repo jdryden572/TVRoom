@@ -1,105 +1,85 @@
 ﻿using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Threading.Channels;
 
 namespace TVRoom.HLS
 {
-
     public sealed class HlsFileIngester : IDisposable
     {
-        private readonly Channel<IngestHlsFile> _channel = Channel.CreateBounded<IngestHlsFile>(new BoundedChannelOptions(50));
-        private readonly Queue<HlsSegment> _segmentQueue = new();
-        private IngestMasterPlaylist? _masterPlaylist;
-        private IngestStreamPlaylist? _latestStreamPlaylist;
-
-        private readonly Subject<HlsSegmentInfo> _streamSegmentSubject = new();
-        public IObservable<HlsSegmentInfo> StreamSegments => _streamSegmentSubject.AsObservable();
+        private readonly Channel<IngestHlsFile> _channel = Channel.CreateBounded<IngestHlsFile>(new BoundedChannelOptions(10));
 
         public HlsFileIngester()
         {
-            _ = Task.Run(ProcessFiles);
+            // Use Publish() to ensure the observable factory is started immediately.
+            var segmentInfos = Observable.Create<HlsSegmentInfo>(ProcessIngestedFiles).Publish();
+            segmentInfos.Connect();
+            StreamSegments = segmentInfos;
         }
+
+        public IObservable<HlsSegmentInfo> StreamSegments { get; }
 
         public async Task IngestStreamFileAsync(IngestHlsFile ingestFile) => await _channel.Writer.WriteAsync(ingestFile);
 
-        private async Task ProcessFiles()
+        public void Dispose()
         {
-            // Using channel here to ensure we process files one at a time (even if uploaded concurrently)
+            _channel.Writer.TryComplete();
+        }
+
+        private async Task ProcessIngestedFiles(IObserver<HlsSegmentInfo> obs)
+        {
+            ParsedMasterPlaylist? masterPlaylist = null;
+            ParsedStreamPlaylist? streamPlaylist = null;
+            Queue<IngestStreamSegment> segmentQueue = new();
+
             await foreach (var file in _channel.Reader.ReadAllAsync())
             {
-                switch (file.FileType)
+                if (file is IngestMasterPlaylist master && master.TryParse(out var parsedMasterPlaylist))
                 {
-                    case IngestFileType.MasterPlaylist:
-                        if (IngestMasterPlaylist.TryParse(file.Payload.Span, out var parsedMaster))
-                        {
-                            _masterPlaylist = parsedMaster;
-                        }
+                    masterPlaylist = parsedMasterPlaylist;
+                    file.Payload.Dispose();
+                }
+                else if (file is IngestStreamPlaylist stream && stream.TryParse(out var parsedStreamPlaylist))
+                {
+                    streamPlaylist = parsedStreamPlaylist;
+                    file.Payload.Dispose();
+                }
+                else if (file is IngestStreamSegment segment)
+                {
+                    // If there is still a segment in the queue when we get a new one, the previous one
+                    // was unmatched by a playlist entry. We will never publish it, so we must dispose it here.
+                    if (segmentQueue.TryDequeue(out var unusedSegment))
+                    {
+                        unusedSegment.Payload.Dispose();
+                    }
 
-                        // Return payload buffer to pool
-                        file.Payload.Dispose();
-                        break;
-
-                    case IngestFileType.Playlist:
-                        if (IngestStreamPlaylist.TryParse(file.Payload.Span, out var parsedStreamPlaylist))
-                        {
-                            _latestStreamPlaylist = parsedStreamPlaylist;
-                        }
-
-                        // Return payload buffer to pool
-                        file.Payload.Dispose();
-                        break;
-
-                    case IngestFileType.Segment:
-                        // If there is still a segment in the queue when we get a new one, the previous one
-                        // was unmatched by a playlist entry. We will never publish it, so we must dispose it here.
-                        if (_segmentQueue.TryDequeue(out var unusedSegment))
-                        {
-                            unusedSegment.Dispose();
-                        }
-
-                        _segmentQueue.Enqueue(new HlsSegment(file.FileName, file.Payload));
-                        break;
-
-                    default:
-                        // Return payload buffer to pool
-                        file.Payload.Dispose();
-                        break;
+                    segmentQueue.Enqueue(segment);
                 }
 
-                if (_masterPlaylist is null || _latestStreamPlaylist is null || _segmentQueue.Count == 0 || _latestStreamPlaylist.SegmentReferences.Count == 0)
+                if (masterPlaylist is null || streamPlaylist is null || segmentQueue.Count == 0)
                 {
+                    // Need to receive all three kinds of files before we can yield anything
                     continue;
                 }
 
-                var latestSegmentRef = _latestStreamPlaylist.SegmentReferences.LastOrDefault();
-
-                var nextSegment = _segmentQueue.Peek();
-                if (nextSegment.FileName == latestSegmentRef.FileName)
+                var latestSegmentRef = streamPlaylist.SegmentReferences.LastOrDefault();
+                if (latestSegmentRef.FileName == segmentQueue.Peek().FileName)
                 {
-                    var segment = _segmentQueue.Dequeue();
-                    var hlsStreamSegment = new HlsSegmentInfo(
-                        _masterPlaylist.StreamInfo,
-                        _latestStreamPlaylist.HlsVersion,
-                        _latestStreamPlaylist.TargetDuration,
+                    var segment = segmentQueue.Dequeue();
+                    var info = new HlsSegmentInfo(
+                        masterPlaylist.StreamInfo,
+                        streamPlaylist.HlsVersion,
+                        streamPlaylist.TargetDuration,
                         latestSegmentRef.Duration,
-                        segment);
+                        segment.Payload);
 
-                    _streamSegmentSubject.OnNext(hlsStreamSegment);
+                    obs.OnNext(info);
                 }
             }
 
             // Dispose any segments we haven't processed
-            while (_segmentQueue.TryDequeue(out var segment))
+            while (segmentQueue.TryDequeue(out var segment))
             {
-                segment.Dispose();
+                segment.Payload.Dispose();
             }
-
-            _streamSegmentSubject.OnCompleted();
-        }
-
-        public void Dispose()
-        {
-            _channel.Writer.Complete();
         }
     }
 }

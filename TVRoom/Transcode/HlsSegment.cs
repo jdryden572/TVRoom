@@ -1,7 +1,7 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Diagnostics;
 
-namespace TVRoom.HLS
+namespace TVRoom.Transcode
 {
     public sealed class HlsSegment : IDisposable
     {

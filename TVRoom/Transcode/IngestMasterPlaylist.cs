@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-namespace TVRoom.HLS
+namespace TVRoom.Transcode
 {
     public sealed class IngestMasterPlaylist
     {

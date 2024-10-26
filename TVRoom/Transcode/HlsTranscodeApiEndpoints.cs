@@ -1,7 +1,7 @@
 ﻿using System.IO.Pipelines;
 using TVRoom.Broadcast;
 
-namespace TVRoom.HLS
+namespace TVRoom.Transcode
 {
     public static class HlsTranscodeApiEndpoints
     {

@@ -2,14 +2,14 @@
 
 namespace TVRoom.HLS
 {
-    public readonly struct InvariantContext : IDisposable
+    public readonly struct CultureContext : IDisposable
     {
         private readonly CultureInfo _originalCulture;
 
-        public InvariantContext()
+        public CultureContext(CultureInfo culture)
         {
             _originalCulture = CultureInfo.CurrentCulture;
-            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            CultureInfo.CurrentCulture = culture;
         }
 
         public void Dispose()

@@ -2,7 +2,7 @@
 using TVRoom.Broadcast;
 using TVRoom.Configuration;
 
-namespace TVRoom.HLS
+namespace TVRoom.Transcode
 {
     public sealed class HlsTranscode : IDisposable
     {

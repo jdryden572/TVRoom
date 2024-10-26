@@ -7,20 +7,20 @@ namespace TVRoom.HLS
 {
     public record struct IngestSegmentReference(string FileName, double Duration);
 
-    public sealed class IngestStreamPlaylist
+    public sealed class ParsedStreamPlaylist
     {
         public int HlsVersion { get; }
         public int TargetDuration { get; }
         public IReadOnlyList<IngestSegmentReference> SegmentReferences { get; }
 
-        private IngestStreamPlaylist(int hlsVersion, int targetDuration, IReadOnlyList<IngestSegmentReference> segmentReferences)
+        private ParsedStreamPlaylist(int hlsVersion, int targetDuration, IReadOnlyList<IngestSegmentReference> segmentReferences)
         {
             HlsVersion = hlsVersion;
             TargetDuration = targetDuration;
             SegmentReferences = segmentReferences;
         }
 
-        public static bool TryParse(ReadOnlySpan<byte> payload, [MaybeNullWhen(false)] out IngestStreamPlaylist parsed)
+        public static bool TryParse(ReadOnlySpan<byte> payload, [MaybeNullWhen(false)] out ParsedStreamPlaylist parsed)
         {
             var version = int.MinValue;
             var targetDuration = int.MinValue;
@@ -71,9 +71,9 @@ namespace TVRoom.HLS
                 ArrayPool<char>.Shared.Return(buffer);
             }
 
-            if (version > int.MinValue && targetDuration > int.MinValue)
+            if (version > int.MinValue && targetDuration > int.MinValue && segments.Count > 0)
             {
-                parsed = new IngestStreamPlaylist(version, targetDuration, segments.AsReadOnly());
+                parsed = new ParsedStreamPlaylist(version, targetDuration, segments.AsReadOnly());
                 return true;
             }
 

@@ -1,4 +1,4 @@
-﻿namespace TVRoom.HLS
+﻿namespace TVRoom.Transcode
 {
     public static class HlsServiceRegistration
     {
