@@ -13,7 +13,7 @@ namespace TVRoom.Tuner
             _logger = logger;
 
             Statuses = Observable.Create<TunerStatus[]>(GetStatusesPeriodicallyAsync)
-                .Publish()
+                .Replay(60)
                 .RefCount();
         }
 
@@ -22,6 +22,8 @@ namespace TVRoom.Tuner
         private async Task GetStatusesPeriodicallyAsync(IObserver<TunerStatus[]> obs, CancellationToken cancellation)
         {
             _logger.LogInformation("Starting to fetch tuner status periodically");
+            var firstStatus = true;
+
             using var ticker = new PeriodicTimer(TimeSpan.FromSeconds(1));
             while (!cancellation.IsCancellationRequested)
             {
@@ -29,6 +31,16 @@ namespace TVRoom.Tuner
                 {
                     await ticker.WaitForNextTickAsync(cancellation);
                     var statuses = await _tunerClient.GetTunerStatusesAsync(cancellation);
+
+                    if (firstStatus)
+                    {
+                        var justBefore = statuses.First().Timestamp - 1;
+                        var nullStatuses = statuses
+                            .Select(s => new TunerStatus(s.Resource, null, null, null, null, null, null, null) { Timestamp = justBefore })
+                            .ToArray();
+                        obs.OnNext(nullStatuses);
+                        firstStatus = false;
+                    }
                     obs.OnNext(statuses);
                 }
                 catch (OperationCanceledException)

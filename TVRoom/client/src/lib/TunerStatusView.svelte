@@ -2,7 +2,8 @@
     import type { TunerStatus } from "./controlPanelClient";
     import TunerStatusChart from "./TunerStatusChart.svelte";
 
-    export let tuner: TunerStatus;
+    export let statuses: TunerStatus[] = [];
+    $: tuner = statuses[statuses.length - 1];
 </script>
 
 <div class="tuner">
@@ -43,7 +44,7 @@
                 </div>
             </div>
             <div class="chart">
-                <TunerStatusChart {tuner} />
+                <TunerStatusChart {statuses} />
             </div>
         </div>
     {:else}

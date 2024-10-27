@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import type { ControlPanelClient, TunerStatus } from "./controlPanelClient";
-    import type { ISubscription } from "@microsoft/signalr";
     import TunerStatusView from "./TunerStatusView.svelte";
 
     export let client: ControlPanelClient;
@@ -11,14 +10,21 @@
         return () => subscription.dispose();
     });
 
-    let tunerStatuses: TunerStatus[] = [];
+    let tunerStatusArrays: TunerStatus[][] = [];
     function onNewTunerStatus(statuses: TunerStatus[]) {
-        tunerStatuses = statuses;
+        statuses.forEach((t, i) => {
+            tunerStatusArrays[i] = tunerStatusArrays[i] || [];
+            tunerStatusArrays[i].push(t)
+        });
+        tunerStatusArrays.forEach(list => {
+            if (list.length > 60) list.shift();
+        });
+        tunerStatusArrays = tunerStatusArrays;
     }
 </script>
 
 <div class="container">
-    {#each tunerStatuses as tuner}
-        <TunerStatusView {tuner} />
+    {#each tunerStatusArrays as statuses}
+        <TunerStatusView {statuses} />
     {/each}
 </div>

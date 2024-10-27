@@ -4,39 +4,49 @@
     import Chart from "chart.js/auto";
     import 'chartjs-adapter-date-fns';
 
-    export let tuner: TunerStatus;
+    export let statuses: TunerStatus[];
 
-    $: onNewTunerStatus(tuner);
-    function onNewTunerStatus(newTunerStatus: TunerStatus) {
+    $: onNewTunerStatuses(statuses);
+    function onNewTunerStatuses(newTunerStatuses: TunerStatus[]) {
         if (chart) {
-            const {
-                timestamp, 
-                signalStrengthPercent, 
-                signalQualityPercent, 
-                symbolQualityPercent
-            } = newTunerStatus;
+            const signalStrengths: [number, number][] = [];
+            const signalQualities: [number, number][] = [];
+            const symbolQualities: [number, number][] = [];
+            for (const newTunerStatus of newTunerStatuses) {
+                const {
+                    timestamp, 
+                    signalStrengthPercent, 
+                    signalQualityPercent, 
+                    symbolQualityPercent
+                } = newTunerStatus;
 
+                signalStrengths.push([timestamp, signalStrengthPercent]);
+                signalQualities.push([timestamp, signalQualityPercent]);
+                symbolQualities.push([timestamp, symbolQualityPercent]);
+            }
+
+            chart.config.data.datasets[0].data = signalStrengths;
+            chart.config.data.datasets[1].data = signalQualities;
+            chart.config.data.datasets[2].data = symbolQualities;
+
+            const timestamp = newTunerStatuses[newTunerStatuses.length - 1]?.timestamp;
             const timeScale = chart.config.options?.scales?.['x'];
             if (timeScale) {
                 timeScale.min = timestamp - 60000;
                 timeScale.max = timestamp;
             }
 
-            pushToDataSet(0, timestamp, signalStrengthPercent);
-            pushToDataSet(1, timestamp, signalQualityPercent);
-            pushToDataSet(2, timestamp, symbolQualityPercent);
-
             chart.update();
         }
     }
 
-    function pushToDataSet(index: number, timestamp: number, value: number) {
-        const data = chart.config.data.datasets[index].data;
-        data.push([timestamp, value]);
-        if (data.length > 60) {
-            data.splice(0, 1);
-        }
-    }
+    // function pushToDataSet(index: number, timestamp: number, value: number) {
+    //     const data = chart.config.data.datasets[index].data;
+    //     data.push([timestamp, value]);
+    //     if (data.length > 60) {
+    //         data.splice(0, 1);
+    //     }
+    // }
 
     let chartElement: HTMLCanvasElement;
     let chart: Chart;
