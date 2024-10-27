@@ -5,7 +5,13 @@ VisualStudioVersion = 17.8.34408.163
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TVRoom", "TVRoom\TVRoom.csproj", "{707C5824-5A14-4DBA-921E-4D74A3E00310}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TVRoom.Tests", "TVRoom.Tests\TVRoom.Tests.csproj", "{6672C6E7-C269-4E96-BC9A-762DB4FEBAB2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TVRoom.Tests", "TVRoom.Tests\TVRoom.Tests.csproj", "{6672C6E7-C269-4E96-BC9A-762DB4FEBAB2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4F478491-29F7-4B4B-B4E7-B4C4CE6CF423}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		Dockerfile = Dockerfile
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

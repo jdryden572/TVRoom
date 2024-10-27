@@ -8,7 +8,8 @@ RUN apt install nodejs npm -y
 
 # copy csproj and restore as distinct layers
 COPY *.sln .
-COPY *.csproj .
+COPY TVRoom/TVRoom.csproj .
+COPY TVRoom.Tests/TVRoom.Tests.csproj .
 RUN dotnet restore
 
 COPY . .
