@@ -8,12 +8,12 @@ RUN apt install nodejs npm -y
 
 # copy csproj and restore as distinct layers
 COPY *.sln .
-COPY TVRoom/TVRoom.csproj .
-COPY TVRoom.Tests/TVRoom.Tests.csproj .
+COPY TVRoom/TVRoom.csproj ./TVRoom/
+COPY TVRoom.Tests/TVRoom.Tests.csproj ./TVRoom.Tests/
 RUN dotnet restore
 
 COPY . .
-RUN dotnet publish -c release -o /app --no-restore
+RUN dotnet publish TVRoom/TVRoom.csproj -c release -o /app --no-restore
 
 # final stage/image
 FROM lscr.io/linuxserver/ffmpeg:latest
