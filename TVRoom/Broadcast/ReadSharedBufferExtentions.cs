@@ -3,10 +3,13 @@ using TVRoom.HLS;
 
 namespace TVRoom.Broadcast
 {
-    public static class BodyReaderExtensions
+    public static class ReadSharedBufferExtentions
     {
-        public static async Task<SharedBuffer> ReadToSharedBufferAsync(this PipeReader reader)
+        public static async Task<SharedBuffer> ReadToSharedBufferAsync(this HttpRequest request, string identifier)
         {
+            var reader = request.BodyReader;
+            var logger = request.HttpContext.RequestServices.GetRequiredService<ILogger<SharedBuffer>>();
+
             try
             {
                 while (true)
@@ -22,7 +25,7 @@ namespace TVRoom.Broadcast
 
                     if (result.IsCompleted || result.IsCanceled)
                     {
-                        var sharedBuffer = SharedBuffer.Create(buffer);
+                        var sharedBuffer = SharedBuffer.Create(buffer, identifier, logger);
                         reader.AdvanceTo(buffer.End);
                         return sharedBuffer;
                     }

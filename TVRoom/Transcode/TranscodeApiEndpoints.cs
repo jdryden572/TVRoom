@@ -1,5 +1,4 @@
-﻿using System.IO.Pipelines;
-using TVRoom.Broadcast;
+﻿using TVRoom.Broadcast;
 using TVRoom.HLS;
 
 namespace TVRoom.Transcode
@@ -10,38 +9,38 @@ namespace TVRoom.Transcode
         {
             var group = app.MapGroup("/transcode");
 
-            group.MapPut("/{transcodeId}/master.m3u8", async (string transcodeId, PipeReader body, TranscodeSessionManager transcodeSessionManager) =>
+            group.MapPut("/{transcodeId}/master.m3u8", async (string transcodeId, HttpRequest request, TranscodeSessionManager transcodeSessionManager) =>
             {
                 if (!transcodeSessionManager.TryGetFileIngester(transcodeId, out var fileIngester))
                 {
                     return Results.NotFound();
                 }
 
-                var payload = await body.ReadToSharedBufferAsync();
+                var payload = await request.ReadToSharedBufferAsync($"master.m3u8_{DateTime.UtcNow:O}");
                 await fileIngester.IngestStreamFileAsync(new IngestMasterPlaylist(payload));
                 return Results.NoContent();
             });
 
-            group.MapPut("/{transcodeId}/live.m3u8", async (string transcodeId, PipeReader body, TranscodeSessionManager transcodeSessionManager) =>
+            group.MapPut("/{transcodeId}/live.m3u8", async (string transcodeId, HttpRequest request, TranscodeSessionManager transcodeSessionManager) =>
             {
                 if (!transcodeSessionManager.TryGetFileIngester(transcodeId, out var fileIngester))
                 {
                     return Results.NotFound();
                 }
 
-                var payload = await body.ReadToSharedBufferAsync();
+                var payload = await request.ReadToSharedBufferAsync($"live.m3u8_{DateTime.UtcNow:O}");
                 await fileIngester.IngestStreamFileAsync(new IngestStreamPlaylist(payload));
                 return Results.NoContent();
             });
 
-            group.MapPut(@"/{transcodeId}/{segment:regex(live\d+.ts)}", async (string transcodeId, string segment, PipeReader body, TranscodeSessionManager transcodeSessionManager) =>
+            group.MapPut(@"/{transcodeId}/{segment:regex(live\d+.ts)}", async (string transcodeId, string segment, HttpRequest request, TranscodeSessionManager transcodeSessionManager) =>
             {
                 if (!transcodeSessionManager.TryGetFileIngester(transcodeId, out var fileIngester))
                 {
                     return Results.NotFound();
                 }
 
-                var payload = await body.ReadToSharedBufferAsync();
+                var payload = await request.ReadToSharedBufferAsync($"{segment}_{DateTime.UtcNow:O}");
                 await fileIngester.IngestStreamFileAsync(new IngestStreamSegment(segment, payload));
                 return Results.NoContent();
             });
