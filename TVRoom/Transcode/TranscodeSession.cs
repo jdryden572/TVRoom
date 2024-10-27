@@ -1,16 +1,16 @@
 ﻿using System.Security.Cryptography;
-using TVRoom.Broadcast;
 using TVRoom.Configuration;
+using TVRoom.HLS;
 
 namespace TVRoom.Transcode
 {
-    public sealed class HlsTranscode : IDisposable
+    public sealed class TranscodeSession : IDisposable
     {
-        private readonly HlsTranscodeManager _transcodeManager;
+        private readonly TranscodeSessionManager _transcodeManager;
         private readonly HlsConfiguration _hlsConfig;
         private readonly ILogger _logger;
 
-        public HlsTranscode(HlsTranscodeManager transcodeManager, HlsConfiguration hlsConfig, ILogger logger, string input, TranscodeConfigDto transcodeConfig)
+        public TranscodeSession(TranscodeSessionManager transcodeManager, HlsConfiguration hlsConfig, ILogger logger, string input, TranscodeConfigDto transcodeConfig)
         {
             _transcodeManager = transcodeManager;
             _hlsConfig = hlsConfig;
@@ -48,7 +48,7 @@ namespace TVRoom.Transcode
         private static string GenerateTranscodeId()
         {
             const string sessionIdCharacters = "abcdefghijklmnopqrstuvwxyz1234567890";
-            return "transcode_" + RandomNumberGenerator.GetString(sessionIdCharacters, 32);
+            return RandomNumberGenerator.GetString(sessionIdCharacters, 32);
         }
 
         private static string RemoveNewLines(string input)

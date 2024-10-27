@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 
-namespace TVRoom.Transcode
+namespace TVRoom.Configuration
 {
     /// <summary>
     /// Process-global configuration for HLS 
@@ -19,10 +19,10 @@ namespace TVRoom.Transcode
                 throw new ArgumentException($"FFmpeg not found at path '{hlsOptions.FFmpegPath}'");
             }
 
-            BaseTranscodeDirectory = new DirectoryInfo(hlsOptions.TranscodeDirectory);
-            if (!BaseTranscodeDirectory.Exists)
+            LogDirectory = new DirectoryInfo(hlsOptions.LogDirectory);
+            if (!LogDirectory.Exists)
             {
-                throw new ArgumentException($"Transcode directory not found at '{hlsOptions.TranscodeDirectory}'");
+                throw new ArgumentException($"Transcode log directory not found at '{hlsOptions.LogDirectory}'");
             }
 
             HlsTime = hlsOptions.HlsTime;
@@ -34,11 +34,11 @@ namespace TVRoom.Transcode
             var serverAddressesFeature = server.Features.Get<IServerAddressesFeature>() ?? throw new InvalidOperationException($"Missing feature {nameof(IServerAddressesFeature)}");
             var serverAddress = serverAddressesFeature.Addresses.FirstOrDefault() ?? throw new InvalidOperationException($"No address returned from {nameof(IServerAddressesFeature)}");
             var uri = new Uri(serverAddress);
-            HlsIngestBaseAddress = $"{uri.Scheme}://127.0.0.1:{uri.Port}/hls";
+            HlsIngestBaseAddress = $"{uri.Scheme}://127.0.0.1:{uri.Port}/transcode";
         }
 
         public FileInfo FFmpeg { get; }
-        public DirectoryInfo BaseTranscodeDirectory { get; }
+        public DirectoryInfo LogDirectory { get; }
         public int HlsTime { get; }
         public int HlsListSize { get; }
         public int HlsDeleteThreshold { get; }
@@ -53,7 +53,7 @@ namespace TVRoom.Transcode
 
         public required string FFmpegPath { get; init; }
 
-        public required string TranscodeDirectory { get; init; }
+        public required string LogDirectory { get; init; }
 
         public int HlsTime { get; init; } = 2;
 

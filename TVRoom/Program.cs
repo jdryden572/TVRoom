@@ -20,7 +20,7 @@ builder.Services.AddTVRoomAuthorizationServices();
 builder.Services.AddTVRoomHlsServices(builder.Configuration);
 builder.Services.AddTVRoomBroadcastServices();
 builder.Services.AddTunerServices(builder.Configuration);
-builder.Services.AddConfigurationServices();
+builder.Services.AddConfigurationServices(builder.Configuration);
 builder.Services.AddDbContext<TVRoomContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("TVRoomContext")));
 
@@ -77,9 +77,9 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 app.MapHub<ControlPanelHub>("/controlPanelHub");
-app.MapBroadcastApiEndpoints(builder.Configuration);
-app.MapHlsTranscodeApiEndpoints(builder.Configuration);
-app.MapTranscodeLogEndpoints();
+app.MapBroadcastApiEndpoints();
+app.MapTranscodeApiEndpoints();
+app.MapBroadcastLogEndpoints();
 app.MapTunerApiEndpoints();
 app.MapConfigurationApiEndpoints();
 app.MapUserApiEndpoints();

@@ -1,10 +1,12 @@
-﻿using System.Reactive.Linq;
+﻿using System.Reactive;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using TVRoom.Transcode;
+using System.Reactive.Threading.Tasks;
+using TVRoom.Configuration;
 
 namespace TVRoom.HLS
 {
-    public sealed class HlsLiveStream : IDisposable
+    public sealed class MergedHlsLiveStream : IDisposable
     {
         private readonly BehaviorSubject<IObservable<HlsSegmentInfo>> _sources;
         private readonly BehaviorSubject<HlsStreamState> _streamStates;
@@ -12,7 +14,7 @@ namespace TVRoom.HLS
 
         private HlsStreamState StreamState => _streamStates.Value;
 
-        public HlsLiveStream(IObservable<HlsSegmentInfo> source, HlsConfiguration hlsConfig)
+        public MergedHlsLiveStream(IObservable<HlsSegmentInfo> source, HlsConfiguration hlsConfig)
         {
             _sources = new(source);
             _streamStates = new(new HlsStreamNotReady(hlsConfig.HlsListSize));
@@ -22,7 +24,13 @@ namespace TVRoom.HLS
                 var newState = _streamStates.Value.WithNewSegment(segmentInfo);
                 _streamStates.OnNext(newState);
             });
+
+            Ready = _streamStates.Skip(1).Take(hlsConfig.HlsPlaylistReadyCount).ToTask();
         }
+
+        public Task Ready { get; }
+
+        public bool IsReady => Ready.IsCompleted;
 
         public void SetNewSource(IObservable<HlsSegmentInfo> source)
         {

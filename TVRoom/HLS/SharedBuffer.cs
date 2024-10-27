@@ -12,8 +12,11 @@ namespace TVRoom.HLS
 
     public sealed class SharedBuffer : IDisposable
     {
-        private static readonly long _maxFileLength = 10 * 1024 * 1024; // 10MB
-        private static readonly ArrayPool<byte> _largePool = ArrayPool<byte>.Create((int)_maxFileLength, 20);
+        public static long RentedBytes = 0;
+        public static int RentedBufferCount = 0;
+
+        public static long MaxFileLength { get; } = 10 * 1024 * 1024; // 10MB
+        private static readonly ArrayPool<byte> _largePool = ArrayPool<byte>.Create((int)MaxFileLength, 20);
 
         private readonly object _lock = new();
 
@@ -48,6 +51,9 @@ namespace TVRoom.HLS
         public static SharedBuffer Create(ReadOnlySequence<byte> source)
         {
             var buffer = MemoryOwner<byte>.Allocate((int)source.Length, _largePool);
+            Interlocked.Add(ref RentedBytes, source.Length);
+            Interlocked.Increment(ref RentedBufferCount);
+
             source.CopyTo(buffer.Span);
             return new SharedBuffer(buffer);
         }
@@ -90,10 +96,15 @@ namespace TVRoom.HLS
 
             if (bufferToReturn is not null)
             {
+                var size = bufferToReturn.Length;
                 GC.SuppressFinalize(this);
                 bufferToReturn.Dispose();
+
+                Interlocked.Add(ref RentedBytes, -1 * size);
+                Interlocked.Decrement(ref RentedBufferCount);
             }
         }
+
         private void ReaderDisposed()
         {
             lock (_lock)

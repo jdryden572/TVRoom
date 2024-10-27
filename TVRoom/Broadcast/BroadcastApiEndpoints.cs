@@ -2,7 +2,7 @@
 {
     public static class BroadcastApiEndpoints
     {
-        public static IEndpointRouteBuilder MapBroadcastApiEndpoints(this IEndpointRouteBuilder app, IConfiguration configuration)
+        public static IEndpointRouteBuilder MapBroadcastApiEndpoints(this IEndpointRouteBuilder app)
         {
             var group = app.MapGroup("/streams");
 

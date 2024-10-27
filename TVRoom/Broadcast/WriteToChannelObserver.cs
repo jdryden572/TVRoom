@@ -22,14 +22,7 @@ namespace TVRoom.Broadcast
 
         public void Dispose()
         {
-            try
-            {
-                _writer.Complete();
-            }
-            catch (InvalidOperationException)
-            {
-                // This channel writer has already been completed
-            }
+            _writer.TryComplete();
         }
     }
 }

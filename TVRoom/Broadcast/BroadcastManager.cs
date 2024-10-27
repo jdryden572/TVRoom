@@ -28,7 +28,7 @@ namespace TVRoom.Broadcast
         public BroadcastSession? CurrentSession => _currentSession;
 
         public BroadcastInfo? NowPlaying => 
-            _currentSession?.IsReady == true ? _currentSession.BroadcastInfo : null;
+            _currentSession?.HlsLiveStream.IsReady == true ? _currentSession.BroadcastInfo : null;
 
         public async Task<BroadcastInfo> StartSession(ChannelInfo channelInfo)
         {
@@ -37,7 +37,8 @@ namespace TVRoom.Broadcast
                 throw new InvalidOperationException("Cannot start broadcast when another is already active!");
             }
 
-            var session = _sessionFactory.CreateBroadcast(channelInfo);
+            var session = await _sessionFactory.CreateBroadcast(channelInfo);
+            session.Start();
 
             await _historyService.StartNewBroadcast(channelInfo);
 
@@ -49,7 +50,7 @@ namespace TVRoom.Broadcast
             {
                 try
                 {
-                    await session.StartAndWaitForReadyAsync();
+                    await session.HlsLiveStream.Ready;
                     await _controlPanelHub.Clients.All.BroadcastReady(session.BroadcastInfo);
                 }
                 catch (Exception ex)
@@ -76,7 +77,7 @@ namespace TVRoom.Broadcast
         {
             if (_currentSession is not null)
             {
-                await _currentSession.HlsLiveStream.StopAsync();
+                await _currentSession.StopAsync();
                 _currentSession.Dispose();
                 _currentSession = null;
 
@@ -85,11 +86,11 @@ namespace TVRoom.Broadcast
             }
         }
 
-        public async Task RestartTranscode()
+        public async Task RestartTranscodeAsync()
         {
             if (_currentSession is not null)
             {
-                await _currentSession.HlsLiveStream.RestartAsync();
+                await _currentSession.RestartTranscodeAsync();
             }
         }
 

@@ -1,18 +1,18 @@
 ﻿using TVRoom.Authorization;
-using TVRoom.Transcode;
+using TVRoom.Configuration;
 
 namespace TVRoom.Broadcast
 {
-    public static class TranscodeLogEndpoints
+    public static class BroadcastLogEndpoints
     {
-        public static IEndpointRouteBuilder MapTranscodeLogEndpoints(this IEndpointRouteBuilder app)
+        public static IEndpointRouteBuilder MapBroadcastLogEndpoints(this IEndpointRouteBuilder app)
         {
             var group = app.MapGroup("/logs")
                 .RequireAuthorization(Policies.RequireAdministrator);
 
             group.MapGet("/", (HlsConfiguration config) =>
             {
-                var directory = config.BaseTranscodeDirectory;
+                var directory = config.LogDirectory;
                 return directory.GetFiles("*.log")
                     .Select(f => new
                     {
@@ -28,7 +28,7 @@ namespace TVRoom.Broadcast
                     return Results.BadRequest();
                 }
 
-                var directory = config.BaseTranscodeDirectory;
+                var directory = config.LogDirectory;
                 var file = new FileInfo(Path.Combine(directory.FullName, log));
                 if (file.Exists)
                 {
@@ -45,7 +45,7 @@ namespace TVRoom.Broadcast
                     return Results.BadRequest();
                 }
 
-                var directory = config.BaseTranscodeDirectory;
+                var directory = config.LogDirectory;
                 var file = new FileInfo(Path.Combine(directory.FullName, log));
                 if (file.Exists)
                 {

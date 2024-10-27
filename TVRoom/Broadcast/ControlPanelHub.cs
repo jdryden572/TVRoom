@@ -38,7 +38,7 @@ namespace TVRoom.Broadcast
             return await _broadcastManager.StartSession(channel);
         }
 
-        public async Task RestartTranscode() => await _broadcastManager.RestartTranscode();
+        public async Task RestartTranscode() => await _broadcastManager.RestartTranscodeAsync();
 
         public async Task StopBroadcast()
         {

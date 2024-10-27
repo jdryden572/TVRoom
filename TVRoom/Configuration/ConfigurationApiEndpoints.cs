@@ -2,9 +2,12 @@
 {
     public static class ConfigurationApiEndpoints
     {
-        public static IServiceCollection AddConfigurationServices(this IServiceCollection services)
+        public static IServiceCollection AddConfigurationServices(this IServiceCollection services, IConfiguration configuration)
         {
+            services.Configure<HlsTranscodeOptions>(configuration.GetSection(HlsTranscodeOptions.SectionName));
+
             services.AddSingleton<TranscodeConfigService>();
+            services.AddSingleton<HlsConfiguration>();
             return services;
         }
 
