@@ -16,7 +16,7 @@ COPY . .
 RUN dotnet publish TVRoom/TVRoom.csproj -c release -o /app --no-restore
 
 # final stage/image
-FROM lscr.io/linuxserver/ffmpeg:latest
+FROM lscr.io/linuxserver/ffmpeg:7.0.2
 RUN apt-get update
 RUN apt-get install -y aspnetcore-runtime-8.0
 WORKDIR /app
