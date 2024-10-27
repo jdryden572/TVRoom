@@ -175,8 +175,11 @@ namespace TVRoom.HLS
         {
             public async Task ExecuteAsync(HttpContext httpContext)
             {
-                httpContext.Response.Headers.ContentType = "application/octet-stream";
-                await httpContext.Response.BodyWriter.WriteAsync(lease.GetMemory());
+                using (lease)
+                {
+                    httpContext.Response.Headers.ContentType = "application/octet-stream";
+                    await httpContext.Response.BodyWriter.WriteAsync(lease.GetMemory());
+                }
             }
         }
     }
