@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using TVRoom.Configuration;
 using TVRoom.HLS;
 using TVRoom.Transcode;
+using TVRoom.Tuner;
 
 namespace TVRoom.Broadcast
 {
@@ -13,8 +14,15 @@ namespace TVRoom.Broadcast
         private readonly ILogger _logger;
         private readonly BehaviorSubject<TranscodeSession> _transcodeSessions;
         private readonly ReplaySubject<string> _debugOutput;
+        private readonly IDisposable _unsubscribeTunerStatus;
 
-        public BroadcastSession(BroadcastInfo broadcastInfo, TranscodeSession transcodeSession, TranscodeSessionManager sessionManager, HlsConfiguration hlsConfig, ILogger logger)
+        public BroadcastSession(
+            BroadcastInfo broadcastInfo,
+            TranscodeSession transcodeSession,
+            TranscodeSessionManager sessionManager,
+            TunerStatusProvider tunerStatusProvider,
+            HlsConfiguration hlsConfig,
+            ILogger logger)
         {
             BroadcastInfo = broadcastInfo;
             _sessionManager = sessionManager;
@@ -28,6 +36,11 @@ namespace TVRoom.Broadcast
                 .Subscribe(_debugOutput);
 
             _debugOutput.WriteTranscodeLogsToFile(BroadcastInfo, hlsConfig);
+
+            // subscribe to tuner statuses, to ensure they are collected for the duration of the broadcast.
+            // Don't actually need to use them here, but this ensures no discontinuities in the status history
+            // while a stream is active.
+            _unsubscribeTunerStatus = tunerStatusProvider.Statuses.Subscribe();
         }
 
         public BroadcastInfo BroadcastInfo { get; }
@@ -58,6 +71,7 @@ namespace TVRoom.Broadcast
             TranscodeSession.Dispose();
             HlsLiveStream.Dispose();
             _debugOutput.OnCompleted();
+            _unsubscribeTunerStatus.Dispose();
         }
     }
 }

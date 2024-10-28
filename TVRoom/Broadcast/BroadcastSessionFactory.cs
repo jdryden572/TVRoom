@@ -7,15 +7,21 @@ namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSessionFactory
     {
-        private readonly TranscodeSessionManager _transcodeManager;
+        private readonly TranscodeSessionManager _transcodeSessionManager;
         private readonly HlsConfiguration _hlsConfig;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly TunerStatusProvider _tunerStatusProvider;
 
-        public BroadcastSessionFactory(HlsConfiguration hlsConfig, ILoggerFactory loggerFactory, TranscodeSessionManager transcodeManager)
+        public BroadcastSessionFactory(
+            HlsConfiguration hlsConfig,
+            ILoggerFactory loggerFactory,
+            TranscodeSessionManager transcodeSessionManager,
+            TunerStatusProvider tunerStatusProvider)
         {
             _hlsConfig = hlsConfig;
             _loggerFactory = loggerFactory;
-            _transcodeManager = transcodeManager;
+            _transcodeSessionManager = transcodeSessionManager;
+            _tunerStatusProvider = tunerStatusProvider;
         }
 
         public async Task<BroadcastSession> CreateBroadcast(ChannelInfo channelInfo)
@@ -24,9 +30,9 @@ namespace TVRoom.Broadcast
             var sessionId = GenerateSessionId();
 
             var logger = _loggerFactory.CreateLogger($"Broadcast-{sessionId}");
-            var transcode = await _transcodeManager.CreateTranscode(channelInfo.Url, logger);
+            var transcode = await _transcodeSessionManager.CreateTranscode(channelInfo.Url, logger);
             var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, transcode.FFmpegProcess.Arguments);
-            return new BroadcastSession(broadcastInfo, transcode, _transcodeManager, _hlsConfig, logger);
+            return new BroadcastSession(broadcastInfo, transcode, _transcodeSessionManager, _tunerStatusProvider, _hlsConfig, logger);
         }
 
         private string GenerateSessionId()

@@ -40,14 +40,6 @@
         }
     }
 
-    // function pushToDataSet(index: number, timestamp: number, value: number) {
-    //     const data = chart.config.data.datasets[index].data;
-    //     data.push([timestamp, value]);
-    //     if (data.length > 60) {
-    //         data.splice(0, 1);
-    //     }
-    // }
-
     let chartElement: HTMLCanvasElement;
     let chart: Chart;
 
