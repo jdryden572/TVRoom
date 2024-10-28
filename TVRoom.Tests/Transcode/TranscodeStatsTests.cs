@@ -1,4 +1,5 @@
-﻿using TVRoom.Transcode;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TVRoom.Transcode;
 
 namespace TVRoom.Tests.Transcode
 {
@@ -26,6 +27,14 @@ namespace TVRoom.Tests.Transcode
             Assert.AreEqual(speed, stats.Speed);
             Assert.AreEqual(duplicate, stats.Duplicate);
             Assert.AreEqual(dropped, stats.Dropped);
+        }
+
+        [TestMethod]
+        [DataRow("frame= 1450 fps=N/A q=N/A size=N/A time=00:00:22.20 bitrate=N/A dup=N/A drop=N/A speed=N/A")]
+        public void TryParse_Failure(string line)
+        {
+            Assert.IsFalse(TranscodeStats.TryParse(line, out var stats));
+            Assert.AreEqual(default(TranscodeStats), stats);
         }
     }
 }

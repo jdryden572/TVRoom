@@ -28,7 +28,11 @@ namespace TVRoom.Transcode
                 var fpsSlice = line.Slice(fpsStart + fpsPrefix.Length, qualityStart - fpsStart - fpsPrefix.Length);
                 var qualitySlice = line.Slice(qualityStart + qualityPrefix.Length, sizeStart - qualityStart - qualityPrefix.Length);
                 var speedSlice = line.Slice(speedStart + speedPrefix.Length);
-                speedSlice = speedSlice.Slice(0, speedSlice.IndexOf('x'));
+                var endSpeedSlice = speedSlice.IndexOf('x');
+                if (endSpeedSlice >= 0)
+                {
+                    speedSlice = speedSlice.Slice(0, speedSlice.IndexOf('x'));
+                }
                 
                 if (float.TryParse(fpsSlice, CultureInfo.InvariantCulture, out var fps) &&
                     float.TryParse(qualitySlice, CultureInfo.InvariantCulture, out var quality) &&
