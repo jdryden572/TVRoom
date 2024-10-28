@@ -109,5 +109,6 @@
         height: 150px;
         flex: 1;
         position: relative;
+        min-width: 300px;
     }
 </style>
