@@ -17,7 +17,7 @@
             tunerStatusArrays[i].push(t)
         });
         tunerStatusArrays.forEach(list => {
-            if (list.length > 60) list.shift();
+            if (list.length > 61) list.shift();
         });
         tunerStatusArrays = tunerStatusArrays;
     }

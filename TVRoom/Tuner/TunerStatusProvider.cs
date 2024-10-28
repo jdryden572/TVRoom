@@ -4,6 +4,8 @@ namespace TVRoom.Tuner
 {
     public sealed class TunerStatusProvider 
     {
+        private const int RetainedSamplesCount = 61;
+
         private readonly TunerClient _tunerClient;
         private readonly ILogger _logger;
 
@@ -13,7 +15,7 @@ namespace TVRoom.Tuner
             _logger = logger;
 
             Statuses = Observable.Create<TunerStatus[]>(GetStatusesPeriodicallyAsync)
-                .Replay(60)
+                .Replay(RetainedSamplesCount)
                 .RefCount();
         }
 

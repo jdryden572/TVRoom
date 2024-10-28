@@ -44,6 +44,7 @@
     let chart: Chart;
 
     onMount(() => {
+        Chart.defaults.borderColor = 'rgb(28, 33, 44)';
         chart = new Chart(
             chartElement,
             {
@@ -79,6 +80,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: false,
+                    clip: { top: 1, left: 0, right: 0, bottom: 0 },
                     scales: {
                         x: {
                             type: 'time',
@@ -89,7 +91,12 @@
                                 }
                             },
                             ticks: {
-                                stepSize: 15,
+                                stepSize: 10,
+                                // Make ticks show the number of seconds from the end time
+                                callback: (value, index, ticks) => {
+                                    const indexFromEnd = ticks.length - index - 1;
+                                    return indexFromEnd === 0 ? 'Now' : `-${indexFromEnd * 10}s`;
+                                }
                             }
                         },
                         y: {
