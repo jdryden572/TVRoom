@@ -34,7 +34,7 @@ namespace TVRoom.Broadcast
 
             var logger = _loggerFactory.CreateLogger($"Broadcast-{sessionId}");
             var transcode = await _transcodeSessionManager.CreateTranscode(channelInfo.Url, logger);
-            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, transcode.FFmpegProcess.Arguments);
+            var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, transcode.FFmpegArguments);
             return new BroadcastSession(
                 broadcastInfo,
                 transcode,

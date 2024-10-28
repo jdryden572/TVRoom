@@ -39,6 +39,7 @@ namespace TVRoom.Broadcast
             }
 
             var session = await _sessionFactory.CreateBroadcast(channelInfo);
+
             await session.StartAsync();
 
             _autoStopBroadcastCts.CancelAfter(_hlsConfiguration.MaxDuration);

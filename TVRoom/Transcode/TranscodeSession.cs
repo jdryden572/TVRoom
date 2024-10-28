@@ -1,5 +1,8 @@
-﻿using System.Security.Cryptography;
+﻿using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Security.Cryptography;
 using TVRoom.Configuration;
+using TVRoom.Helpers;
 using TVRoom.HLS;
 
 namespace TVRoom.Transcode
@@ -9,6 +12,7 @@ namespace TVRoom.Transcode
         private readonly TranscodeSessionManager _transcodeManager;
         private readonly HlsConfiguration _hlsConfig;
         private readonly ILogger _logger;
+        private readonly FFmpegProcess _ffmpegProcess;
 
         public TranscodeSession(TranscodeSessionManager transcodeManager, HlsConfiguration hlsConfig, ILogger logger, string input, TranscodeConfigDto transcodeConfig)
         {
@@ -21,27 +25,37 @@ namespace TVRoom.Transcode
             var playlist = $"{_hlsConfig.HlsIngestBaseAddress}/{Id}/live.m3u8";
             var arguments = $"-y {RemoveNewLines(transcodeConfig.InputVideoParameters)} -i {input} -c:a aac -ac 2 {RemoveNewLines(transcodeConfig.OutputVideoParameters)} {hlsSettings} -master_pl_name master.m3u8 {playlist}";
 
-            FFmpegProcess = new FFmpegProcess(_hlsConfig.FFmpeg.FullName, arguments, logger);
-            //FFmpegProcess.FFmpegOutput.WriteTranscodeLogsToFile(broadcastInfo, hlsConfig);
-            FileIngester = new();
+            _ffmpegProcess = new FFmpegProcess(_hlsConfig.FFmpeg.FullName, arguments, logger);
+
+            Stats = _ffmpegProcess.FFmpegOutput.ConditionalMap<string, TranscodeStats>((line, onNext) =>
+            {
+                if (TranscodeStats.TryParse(line, out var stats))
+                {
+                    onNext(stats);
+                }
+            });
         }
 
         public string Id { get; }
 
-        public FFmpegProcess FFmpegProcess { get; }
+        public string FFmpegArguments => _ffmpegProcess.Arguments;
 
-        public HlsFileIngester FileIngester { get; }
+        public IObservable<string> FFmpegOutput => _ffmpegProcess.FFmpegOutput;
+
+        public IObservable<TranscodeStats> Stats { get; }
+
+        public HlsFileIngester FileIngester { get; } = new();
 
         public void Start()
         {
             _logger.LogWarning("Starting transcode session {Id}", Id);
-            FFmpegProcess.Start();
+            _ffmpegProcess.Start();
         }
 
         public async Task StopAsync()
         {
             _logger.LogWarning("Stopping transcode session {Id}", Id);
-            await FFmpegProcess.StopAsync();
+            await _ffmpegProcess.StopAsync();
             _logger.LogWarning("Finished stopping transcode session {Id}", Id);
         }
 
@@ -59,7 +73,7 @@ namespace TVRoom.Transcode
 
         public void Dispose()
         {
-            FFmpegProcess.Dispose();
+            _ffmpegProcess.Dispose();
             _transcodeManager.Remove(Id);
         }
     }

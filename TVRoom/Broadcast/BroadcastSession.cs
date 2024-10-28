@@ -1,6 +1,5 @@
 ﻿using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Threading.Channels;
 using TVRoom.Configuration;
 using TVRoom.HLS;
 using TVRoom.Transcode;
@@ -10,11 +9,12 @@ namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSession : IDisposable
     {
+        private const int DebugOutputRetainedLines = 50;
+
         private readonly TranscodeSessionManager _sessionManager;
         private readonly BroadcastHistoryService _broadcastHistoryService;
         private readonly ILogger _logger;
         private readonly BehaviorSubject<TranscodeSession> _transcodeSessions;
-        private readonly ReplaySubject<string> _debugOutput;
         private readonly IDisposable _unsubscribeTunerStatus;
 
         public BroadcastSession(
@@ -31,13 +31,15 @@ namespace TVRoom.Broadcast
             _logger = logger;
             _transcodeSessions = new(transcodeSession);
             HlsLiveStream = new(transcodeSession.FileIngester.StreamSegments, hlsConfig);
-            _debugOutput = new(50);
-            _transcodeSessions
-                .Select(s => s.FFmpegProcess.FFmpegOutput)
-                .Switch()
-                .Subscribe(_debugOutput);
 
-            _debugOutput.WriteTranscodeLogsToFile(BroadcastInfo, hlsConfig);
+            var debugOutput = _transcodeSessions
+                .Select(s => s.FFmpegOutput)
+                .Switch()
+                .Replay(DebugOutputRetainedLines);
+
+            debugOutput.WriteTranscodeLogsToFile(BroadcastInfo, hlsConfig);
+            debugOutput.Connect();
+            DebugOutput = debugOutput;
 
             // subscribe to tuner statuses, to ensure they are collected for the duration of the broadcast.
             // Don't actually need to use them here, but this ensures no discontinuities in the status history
@@ -51,6 +53,10 @@ namespace TVRoom.Broadcast
         public MergedHlsLiveStream HlsLiveStream { get; }
 
         public TranscodeSession TranscodeSession => _transcodeSessions.Value;
+
+        public IObservable<TranscodeStats> TranscodeStats => _transcodeSessions.Select(s => s.Stats).Switch();
+
+        public IObservable<string> DebugOutput { get; }
 
         public async Task StartAsync()
         {
@@ -75,13 +81,11 @@ namespace TVRoom.Broadcast
             newTranscode.Start();
         }
 
-        public ChannelReader<string> GetDebugOutput(CancellationToken unsubscribe) => _debugOutput.AsChannelReader(unsubscribe);
-
         public void Dispose()
         {
             TranscodeSession.Dispose();
             HlsLiveStream.Dispose();
-            _debugOutput.OnCompleted();
+            _transcodeSessions.OnCompleted();
             _unsubscribeTunerStatus.Dispose();
         }
     }

@@ -14,6 +14,34 @@ interface ChannelInfo {
     URL: string,
 }
 
+interface TranscodeStatsDto {
+    fps: number,
+    q: number,
+    s: number,
+    dup: number,
+    drop: number,
+}
+
+interface TranscodeStats {
+    framesPerSecond: number,
+    quality: number,
+    speed: number,
+    duplicate: number,
+    dropped: number,
+}
+
+interface TunerStatusDto {
+    res: string,
+    ts: number,
+    num: string,
+    name: string,
+    ip: string,
+    rate: number,
+    sigS: number,
+    sigQ: number,
+    symQ: number,
+}
+
 interface TunerStatus {
     resource: string,
     timestamp: number,
@@ -112,18 +140,52 @@ class ControlPanelClient {
             });
     }
 
+    public subscribeToTranscodeStats(onValue: (msg: TranscodeStats) => void) : ISubscription<any> {
+        return this.connection.stream('GetTranscodeStats')
+            .subscribe({
+                next: (val: TranscodeStatsDto) => onValue(toTranscodeStats(val)),
+                complete: () => {},
+                error: console.error,
+            });
+    }
+
     public subscribeToTunerStatuses(onValue: (statuses: TunerStatus[]) => void) : ISubscription<any> {
         return this.connection.stream('GetTunerStatuses')
             .subscribe({
-                next: onValue,
+                next: (vals: TunerStatusDto[]) => onValue(vals.map(toTunerStatus)),
                 complete: () => {},
                 error: console.error,
             });
     }
 }
 
+function toTunerStatus(dto: TunerStatusDto) : TunerStatus {
+    return {
+        resource: dto.res,
+        timestamp: dto.ts,
+        channelNumber: dto.num,
+        channelName: dto.name,
+        targetIP: dto.ip,
+        networkRate: dto.rate,
+        signalStrengthPercent: dto.sigS,
+        signalQualityPercent: dto.sigQ,
+        symbolQualityPercent: dto.symQ,
+    };
+}
+
+function toTranscodeStats(dto: TranscodeStatsDto) : TranscodeStats {
+    return {
+        speed: dto.s,
+        quality: dto.q,
+        framesPerSecond: dto.fps,
+        duplicate: dto.dup,
+        dropped: dto.drop,
+    };
+}
+
 export {
     ControlPanelClient,
     type BroadcastInfo,
+    type TranscodeStats,
     type TunerStatus,
 }

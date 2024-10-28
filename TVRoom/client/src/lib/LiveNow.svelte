@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { BroadcastInfo } from "./controlPanelClient";
+    import type { BroadcastInfo, ControlPanelClient, TranscodeStats } from "./controlPanelClient";
     import LiveNowIcon from "./LiveNowIcon.svelte";
     import LiveDuration from "./LiveDuration.svelte";
 
@@ -20,7 +20,7 @@
 <style>
     .live-now {
         display: grid;
-        grid-template-columns: auto 1fr;
+        grid-template-columns: min-content 1fr;
         gap: 1em;
         padding-block: 1em
     }

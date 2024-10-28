@@ -3,6 +3,8 @@ using TVRoom.Tuner;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Threading.Channels;
+using TVRoom.Transcode;
+using System.Reactive.Linq;
 
 namespace TVRoom.Broadcast
 {
@@ -66,7 +68,20 @@ namespace TVRoom.Broadcast
                 throw new InvalidOperationException("No broadcast session is active");
             }
 
-            return currentSession.GetDebugOutput(cancellation);
+            return currentSession.DebugOutput.AsChannelReader(cancellation);
+        }
+
+        public ChannelReader<TranscodeStats> GetTranscodeStats(CancellationToken cancellation)
+        {
+            var currentSession = _broadcastManager.CurrentSession;
+            if (currentSession is null)
+            {
+                throw new InvalidOperationException("No broadcast session is active");
+            }
+
+            return currentSession.TranscodeStats
+                .Sample(TimeSpan.FromSeconds(1))
+                .AsChannelReader(cancellation);
         }
 
         public ChannelReader<TunerStatus[]> GetTunerStatuses(CancellationToken cancellation) => _tunerStatusProvider.Statuses.AsChannelReader(cancellation);

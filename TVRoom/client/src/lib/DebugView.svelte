@@ -48,22 +48,14 @@
 </script>
 
 <div class="debug-view">
-    {#if $currentBroadcast}
-        <details>
-            <summary>Session info</summary>
-            <div class="session-details">
-                <div>
-                    <h5>Session ID</h5>
-                    <p>{$currentBroadcast?.sessionId}</p>
-                </div>
-                <div>
-                    <h5>Transcode command</h5>
-                    <p>ffmpeg {$currentBroadcast?.fFmpegArguments}</p>
-                </div>
-            </div>
+    {#if $clientConnected}
+        <details open>
+            <summary>Tuner status</summary>
+            <TunerStatusMonitor {client} />
         </details>
     {/if}
-    <details open>
+    
+    <details>
         <summary>Transcode output</summary>
         <div class="debug-output">
             <div class="line-config">
@@ -80,10 +72,19 @@
         </div>
     </details>
 
-    {#if $clientConnected}
+    {#if $currentBroadcast}
         <details>
-            <summary>Tuner status</summary>
-            <TunerStatusMonitor {client} />
+            <summary>Session info</summary>
+            <div class="session-details">
+                <div>
+                    <h5>Session ID</h5>
+                    <p>{$currentBroadcast?.sessionId}</p>
+                </div>
+                <div>
+                    <h5>Transcode command</h5>
+                    <p>ffmpeg {$currentBroadcast?.fFmpegArguments}</p>
+                </div>
+            </div>
         </details>
     {/if}
 
