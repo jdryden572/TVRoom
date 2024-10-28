@@ -1,6 +1,6 @@
-﻿using TVRoom.Tuner;
-using Microsoft.AspNetCore.SignalR;
-using static System.Formats.Asn1.AsnWriter;
+﻿using Microsoft.AspNetCore.SignalR;
+using TVRoom.Configuration;
+using TVRoom.Tuner;
 
 namespace TVRoom.Broadcast
 {
@@ -8,21 +8,22 @@ namespace TVRoom.Broadcast
     public sealed class BroadcastManager : IDisposable
     {
         private readonly BroadcastSessionFactory _sessionFactory;
-        private readonly BroadcastHistoryService _historyService;
         private readonly IHubContext<ControlPanelHub, IControlPanelClient> _controlPanelHub;
+        private readonly HlsConfiguration _hlsConfiguration;
         private readonly ILogger _logger;
         private BroadcastSession? _currentSession;
+        private CancellationTokenSource _autoStopBroadcastCts = new();
 
         public BroadcastManager(
             IHubContext<ControlPanelHub, IControlPanelClient> controlPanelHub,
             ILogger<BroadcastManager> logger,
             BroadcastSessionFactory sessionFactory,
-            BroadcastHistoryService historyService)
+            HlsConfiguration hlsConfiguration)
         {
             _controlPanelHub = controlPanelHub;
             _logger = logger;
             _sessionFactory = sessionFactory;
-            _historyService = historyService;
+            _hlsConfiguration = hlsConfiguration;
         }
 
         public BroadcastSession? CurrentSession => _currentSession;
@@ -38,9 +39,10 @@ namespace TVRoom.Broadcast
             }
 
             var session = await _sessionFactory.CreateBroadcast(channelInfo);
-            session.Start();
+            await session.StartAsync();
 
-            await _historyService.StartNewBroadcast(channelInfo);
+            _autoStopBroadcastCts.CancelAfter(_hlsConfiguration.MaxDuration);
+            _autoStopBroadcastCts.Token.Register(() => Task.Run(StopSessionAsync));
 
             _currentSession = session;
             await _controlPanelHub.Clients.All.BroadcastStarted(session.BroadcastInfo);
@@ -62,17 +64,6 @@ namespace TVRoom.Broadcast
             return session.BroadcastInfo;
         }
 
-        public async Task<ChannelInfo?> GetLastChannel()
-        {
-            var latest = await _historyService.GetLatestBroadcast();
-            if (latest is null)
-            {
-                return null;
-            }
-
-            return new ChannelInfo(latest.GuideNumber, latest.GuideName, latest.Url);
-        }
-
         public async Task StopSessionAsync()
         {
             if (_currentSession is not null)
@@ -80,8 +71,8 @@ namespace TVRoom.Broadcast
                 await _currentSession.StopAsync();
                 _currentSession.Dispose();
                 _currentSession = null;
+                _autoStopBroadcastCts = new();
 
-                await _historyService.EndCurrentBroadcast();
                 await _controlPanelHub.Clients.All.BroadcastStopped();
             }
         }

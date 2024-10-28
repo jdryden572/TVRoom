@@ -19,12 +19,14 @@ namespace TVRoom.Broadcast
         private readonly BroadcastManager _broadcastManager;
         private readonly TunerClient _tunerClient;
         private readonly TunerStatusProvider _tunerStatusProvider;
+        private readonly BroadcastHistoryService _broadcastHistoryService;
 
-        public ControlPanelHub(BroadcastManager broadcastManager, TunerClient tunerClient, TunerStatusProvider tunerStatusProvider)
+        public ControlPanelHub(BroadcastManager broadcastManager, TunerClient tunerClient, TunerStatusProvider tunerStatusProvider, BroadcastHistoryService broadcastHistoryService)
         {
             _broadcastManager = broadcastManager;
             _tunerClient = tunerClient;
             _tunerStatusProvider = tunerStatusProvider;
+            _broadcastHistoryService = broadcastHistoryService;
         }
 
         public async Task<BroadcastInfo> StartBroadcast(string guideNumber)
@@ -47,7 +49,8 @@ namespace TVRoom.Broadcast
 
         public async Task<ChannelInfo?> GetLastChannel()
         {
-            return await _broadcastManager.GetLastChannel();
+            var latest = await _broadcastHistoryService.GetLatestBroadcast();
+            return latest is null ? null : new ChannelInfo(latest.GuideNumber, latest.GuideName, latest.Url);
         }
 
         public BroadcastInfo? GetCurrentSession()

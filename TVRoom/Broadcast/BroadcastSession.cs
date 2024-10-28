@@ -11,6 +11,7 @@ namespace TVRoom.Broadcast
     public sealed class BroadcastSession : IDisposable
     {
         private readonly TranscodeSessionManager _sessionManager;
+        private readonly BroadcastHistoryService _broadcastHistoryService;
         private readonly ILogger _logger;
         private readonly BehaviorSubject<TranscodeSession> _transcodeSessions;
         private readonly ReplaySubject<string> _debugOutput;
@@ -21,6 +22,7 @@ namespace TVRoom.Broadcast
             TranscodeSession transcodeSession,
             TranscodeSessionManager sessionManager,
             TunerStatusProvider tunerStatusProvider,
+            BroadcastHistoryService broadcastHistoryService,
             HlsConfiguration hlsConfig,
             ILogger logger)
         {
@@ -41,6 +43,7 @@ namespace TVRoom.Broadcast
             // Don't actually need to use them here, but this ensures no discontinuities in the status history
             // while a stream is active.
             _unsubscribeTunerStatus = tunerStatusProvider.Statuses.Subscribe();
+            _broadcastHistoryService = broadcastHistoryService;
         }
 
         public BroadcastInfo BroadcastInfo { get; }
@@ -49,9 +52,17 @@ namespace TVRoom.Broadcast
 
         public TranscodeSession TranscodeSession => _transcodeSessions.Value;
 
-        public void Start() => TranscodeSession.Start();
+        public async Task StartAsync()
+        {
+            await _broadcastHistoryService.StartNewBroadcast(BroadcastInfo.ChannelInfo);
+            TranscodeSession.Start();
+        }
 
-        public async Task StopAsync() => await TranscodeSession.StopAsync();
+        public async Task StopAsync()
+        {
+            await _broadcastHistoryService.EndCurrentBroadcast();
+            await TranscodeSession.StopAsync();
+        }
 
         public async Task RestartTranscodeAsync()
         {

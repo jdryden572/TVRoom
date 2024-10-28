@@ -30,6 +30,7 @@ namespace TVRoom.Configuration
             HlsDeleteThreshold = hlsOptions.HlsDeleteThreshold;
             HlsPlaylistReadyCount = hlsOptions.HlsPlaylistReadyCount;
             ApplicationStopping = appLifetime.ApplicationStopping;
+            MaxDuration = hlsOptions.MaxDuration;
 
             var serverAddressesFeature = server.Features.Get<IServerAddressesFeature>() ?? throw new InvalidOperationException($"Missing feature {nameof(IServerAddressesFeature)}");
             var serverAddress = serverAddressesFeature.Addresses.FirstOrDefault() ?? throw new InvalidOperationException($"No address returned from {nameof(IServerAddressesFeature)}");
@@ -45,6 +46,8 @@ namespace TVRoom.Configuration
         public int HlsPlaylistReadyCount { get; }
         public CancellationToken ApplicationStopping { get; }
         public string HlsIngestBaseAddress { get; }
+
+        public TimeSpan MaxDuration { get; }
     }
 
     public class HlsTranscodeOptions
@@ -65,5 +68,7 @@ namespace TVRoom.Configuration
         public int HlsDeleteThreshold { get; } = 2;
 
         public int HlsPlaylistReadyCount { get; init; } = 2;
+
+        public TimeSpan MaxDuration { get; init; } = TimeSpan.FromHours(4);
     }
 }
