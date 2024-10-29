@@ -9,7 +9,7 @@ namespace TVRoom.Broadcast
 {
     public sealed class BroadcastSession : IDisposable
     {
-        private const int DebugOutputRetainedLines = 50;
+        private static readonly TimeSpan DebugOutputRetention = TimeSpan.FromSeconds(60);
 
         private readonly TranscodeSessionManager _sessionManager;
         private readonly BroadcastHistoryService _broadcastHistoryService;
@@ -35,7 +35,7 @@ namespace TVRoom.Broadcast
             var debugOutput = _transcodeSessions
                 .Select(s => s.FFmpegOutput)
                 .Switch()
-                .Replay(DebugOutputRetainedLines);
+                .Replay(DebugOutputRetention);
 
             debugOutput.WriteTranscodeLogsToFile(BroadcastInfo, hlsConfig);
             debugOutput.Connect();
