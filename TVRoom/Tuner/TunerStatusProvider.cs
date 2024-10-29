@@ -2,7 +2,7 @@
 
 namespace TVRoom.Tuner
 {
-    public sealed class TunerStatusProvider 
+    public sealed partial class TunerStatusProvider 
     {
         private const int RetainedSamplesCount = 61;
 
@@ -23,7 +23,7 @@ namespace TVRoom.Tuner
 
         private async Task GetStatusesPeriodicallyAsync(IObserver<TunerStatus[]> obs, CancellationToken cancellation)
         {
-            _logger.LogInformation("Starting to fetch tuner status periodically");
+            LogStartingTunerStatusFetch();
             var firstStatus = true;
 
             using var ticker = new PeriodicTimer(TimeSpan.FromSeconds(1));
@@ -50,11 +50,20 @@ namespace TVRoom.Tuner
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error fetching tuner status");
+                    LogErrorFetchingTunerStatus(ex);
                 }
             }
 
-            _logger.LogInformation("Stopping tuner status fetching");
+            LogStoppingTunerStatusFetch();
         }
+
+        [LoggerMessage(LogLevel.Information, "Starting to fetch tuner status periodically")]
+        private partial void LogStartingTunerStatusFetch();
+
+        [LoggerMessage(LogLevel.Information, "Stopping tuner status fetching")]
+        private partial void LogStoppingTunerStatusFetch();
+
+        [LoggerMessage(LogLevel.Error, "Error fetching tuner status")]
+        private partial void LogErrorFetchingTunerStatus(Exception ex);
     }
 }

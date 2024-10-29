@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Buffers;
 using System.Collections.Immutable;
@@ -20,13 +21,13 @@ namespace TVRoom.Tests.HLS
             StreamInfo: "BANDWIDTH=6740800,RESOLUTION=1280x720,CODECS=\"avc1.4d002a,mp4a.40.2\"",
             HlsVersion: 3,
             TargetDuration: 3,
-            LiveSegments: HlsSegmentQueue.Create(3, new[]
+            LiveSegments: HlsSegmentList.Create(3, new[]
             {
                 new HlsSegmentEntry(7, 1.5015, GetPayload("FirstPayload"u8)),
                 new HlsSegmentFollowedByDiscontinuity(8, 3.003, GetPayload("SecondPayload"u8)),
                 new HlsSegmentEntry(9, 3.003, GetPayload("ThidPayload"u8)),
             }),
-            PreviousSegments: new HlsSegmentQueue(3));
+            PreviousSegments: new HlsSegmentList(3));
 
         [TestMethod]
         public void GetNext_FirstSegment()
@@ -208,7 +209,8 @@ namespace TVRoom.Tests.HLS
 
         private static SharedBuffer GetPayload(ReadOnlySpan<byte> data)
         {
-            return SharedBuffer.Create(new System.Buffers.ReadOnlySequence<byte>(data.ToArray()));
+            var logger = new LoggerFactory().CreateLogger<SharedBuffer>();
+            return SharedBuffer.Create(new ReadOnlySequence<byte>(data.ToArray()), logger);
         }
     }
 }

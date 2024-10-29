@@ -46,6 +46,11 @@ namespace TVRoom.Broadcast
             // while a stream is active.
             _unsubscribeTunerStatus = tunerStatusProvider.Statuses.Subscribe();
             _broadcastHistoryService = broadcastHistoryService;
+
+            for (int i = 0; i < 100; i++)
+            {
+                
+            }
         }
 
         public BroadcastInfo BroadcastInfo { get; }

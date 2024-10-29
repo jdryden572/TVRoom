@@ -49,8 +49,8 @@ namespace TVRoom.Transcode
 
             group.MapGet("/bufferstats", () => new
             {
-                SharedBuffer.RentedBufferCount,
-                SharedBuffer.RentedBytes,
+                RentedBufferCount = SharedBuffer.RentedBufferCount.Value,
+                RentedBytes = SharedBuffer.RentedBytes.Value,
             });
 
             return app;

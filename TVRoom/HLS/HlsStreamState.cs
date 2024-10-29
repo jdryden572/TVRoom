@@ -7,7 +7,7 @@ namespace TVRoom.HLS
 {
     public abstract record HlsStreamState
     {
-        protected readonly int _hlsListSize;
+        private readonly int _hlsListSize;
 
         public HlsStreamState(int hlsListSize)
         {
@@ -42,12 +42,12 @@ namespace TVRoom.HLS
 
             var segment = new HlsSegmentEntry(0, segmentInfo.Duration, segmentInfo.Payload);
             return new HlsStreamWithSegments(
-                _hlsListSize,
+                HlsListSize,
                 segmentInfo.StreamInfo,
                 segmentInfo.HlsVersion,
                 segmentInfo.TargetDuration,
-                new HlsSegmentQueue(HlsListSize).Push(segment, out _),
-                new HlsSegmentQueue(HlsListSize));
+                new HlsSegmentList(HlsListSize).Push(segment, out _),
+                new HlsSegmentList(HlsListSize));
         }
 
         public override IResult GetMasterPlaylist() => Results.NotFound();
@@ -60,15 +60,15 @@ namespace TVRoom.HLS
         string StreamInfo,
         int HlsVersion,
         double TargetDuration,
-        HlsSegmentQueue LiveSegments,
-        HlsSegmentQueue PreviousSegments) : HlsStreamState(HlsListSize)
+        HlsSegmentList LiveSegments,
+        HlsSegmentList PreviousSegments) : HlsStreamState(HlsListSize)
     {
         public override HlsStreamState WithNewDiscontinuity()
         {
             var lastSegment = LiveSegments[^1];
             return this with
             {
-                LiveSegments = LiveSegments.ReplaceLast(lastSegment.WithDiscontinuity()),
+                LiveSegments = LiveSegments.Replace(^1, lastSegment.WithDiscontinuity()),
             };
         }
 

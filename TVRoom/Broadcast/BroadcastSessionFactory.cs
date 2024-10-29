@@ -45,7 +45,7 @@ namespace TVRoom.Broadcast
                 logger);
         }
 
-        private string GenerateSessionId()
+        private static string GenerateSessionId()
         {
             const string sessionIdCharacters = "abcdefghijklmnopqrstuvwxyz1234567890";
             return RandomNumberGenerator.GetString(sessionIdCharacters, 32);

@@ -1,13 +1,11 @@
-﻿using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using TVRoom.Configuration;
 using TVRoom.Helpers;
 using TVRoom.HLS;
 
 namespace TVRoom.Transcode
 {
-    public sealed class TranscodeSession : IDisposable
+    public sealed partial class TranscodeSession : IDisposable
     {
         private readonly TranscodeSessionManager _transcodeManager;
         private readonly HlsConfiguration _hlsConfig;
@@ -46,17 +44,18 @@ namespace TVRoom.Transcode
 
         public HlsFileIngester FileIngester { get; } = new();
 
+
         public void Start()
         {
-            _logger.LogWarning("Starting transcode session {Id}", Id);
+            LogStartingTranscode(Id);
             _ffmpegProcess.Start();
         }
 
         public async Task StopAsync()
         {
-            _logger.LogWarning("Stopping transcode session {Id}", Id);
+            LogStoppingTranscode(Id);
             await _ffmpegProcess.StopAsync();
-            _logger.LogWarning("Finished stopping transcode session {Id}", Id);
+            LogTranscodeStopped(Id);
         }
 
         private static string GenerateTranscodeId()
@@ -65,9 +64,10 @@ namespace TVRoom.Transcode
             return RandomNumberGenerator.GetString(sessionIdCharacters, 32);
         }
 
+        private static readonly char[] separator = ['\r', '\n'];
         private static string RemoveNewLines(string input)
         {
-            var parts = input.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var parts = input.Split(separator, StringSplitOptions.RemoveEmptyEntries);
             return string.Join(' ', parts);
         }
 
@@ -76,5 +76,14 @@ namespace TVRoom.Transcode
             _ffmpegProcess.Dispose();
             _transcodeManager.Remove(Id);
         }
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Starting transcode session {Id}")]
+        private partial void LogStartingTranscode(string id);
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Stopping transcode session {Id}")]
+        private partial void LogStoppingTranscode(string id);
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Transcode session {Id} stopped")]
+        private partial void LogTranscodeStopped(string id);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Buffers;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers;
 using TVRoom.HLS;
 
 namespace TVRoom.Tests.HLS
@@ -6,13 +7,15 @@ namespace TVRoom.Tests.HLS
     [TestClass]
     public class SharedBufferTests
     {
-        private byte[] _testData = "SomeData"u8.ToArray();
-        private ReadOnlySequence<byte> TestSequence => new ReadOnlySequence<byte>(_testData);
+        private static ILogger _logger = new LoggerFactory().CreateLogger<SharedBuffer>();
+        private static readonly byte[] _testData = "SomeData"u8.ToArray();
+
+        private SharedBuffer CreateSharedBuffer() => SharedBuffer.Create(new ReadOnlySequence<byte>(_testData), logger: _logger);
 
         [TestMethod]
         public void Lease_ReturnsSpan()
         {
-            using var buffer = SharedBuffer.Create(TestSequence);
+            using var buffer = CreateSharedBuffer();
             using var lease = buffer.Rent();
 
             CollectionAssert.AreEqual(_testData, lease.GetSpan().ToArray());
@@ -21,7 +24,7 @@ namespace TVRoom.Tests.HLS
         [TestMethod]
         public void DisposeBuffer_ReturnsBufferImmediatelyIfNoLeases()
         {
-            var buffer = SharedBuffer.Create(TestSequence);
+            var buffer = CreateSharedBuffer();
             buffer.Dispose();
             Assert.IsTrue(buffer.IsBufferDisposed);
         }
@@ -30,7 +33,7 @@ namespace TVRoom.Tests.HLS
         [ExpectedException(typeof(ObjectDisposedException))]
         public void Rent_ThrowsIfDisposed()
         {
-            var buffer = SharedBuffer.Create(TestSequence);
+            var buffer = CreateSharedBuffer();
             buffer.Dispose();
             buffer.Rent();
         }
@@ -39,7 +42,7 @@ namespace TVRoom.Tests.HLS
         [ExpectedException(typeof(ObjectDisposedException))]
         public void Lease_ThrowsIfDisposed()
         {
-            using var buffer = SharedBuffer.Create(TestSequence);
+            using var buffer = CreateSharedBuffer();
             var lease = buffer.Rent();
             lease.Dispose();
             lease.GetSpan();
@@ -48,7 +51,7 @@ namespace TVRoom.Tests.HLS
         [TestMethod]
         public void Lease_DelaysDispose()
         {
-            var buffer = SharedBuffer.Create(TestSequence);
+            var buffer = CreateSharedBuffer();
 
             using (var lease = buffer.Rent())
             {
@@ -64,7 +67,7 @@ namespace TVRoom.Tests.HLS
         [TestMethod]
         public void Rent_AllowedMultipleTimes()
         {
-            var buffer = SharedBuffer.Create(TestSequence);
+            var buffer = CreateSharedBuffer();
 
             using (var lease = buffer.Rent())
             {
@@ -80,7 +83,7 @@ namespace TVRoom.Tests.HLS
         [TestMethod]
         public void Rent_AllowedMultipleTimesSimultaneously()
         {
-            var buffer = SharedBuffer.Create(TestSequence);
+            var buffer = CreateSharedBuffer();
 
             using (var lease = buffer.Rent())
             using (var lease2 = buffer.Rent())
@@ -93,7 +96,7 @@ namespace TVRoom.Tests.HLS
         [TestMethod]
         public void DisposeBuffer_ReturnsBufferWhenAllLeasesDisposed()
         {
-            var buffer = SharedBuffer.Create(TestSequence);
+            var buffer = CreateSharedBuffer();
 
             var lease = buffer.Rent();
             var lease2 = buffer.Rent();

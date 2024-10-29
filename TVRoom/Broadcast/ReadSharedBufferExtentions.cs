@@ -25,7 +25,7 @@ namespace TVRoom.Broadcast
 
                     if (result.IsCompleted || result.IsCanceled)
                     {
-                        var sharedBuffer = SharedBuffer.Create(buffer, identifier, logger);
+                        var sharedBuffer = SharedBuffer.Create(buffer, logger, identifier);
                         reader.AdvanceTo(buffer.End);
                         return sharedBuffer;
                     }

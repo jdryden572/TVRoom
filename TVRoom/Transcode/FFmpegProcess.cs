@@ -5,12 +5,12 @@ using System.Reactive.Subjects;
 
 namespace TVRoom.Transcode
 {
-    public class FFmpegProcess : IDisposable
+    public sealed partial class FFmpegProcess : IDisposable
     {
         private readonly ILogger _logger;
         private readonly Process _process = new();
-        private bool _disposed = false;
-        private bool _stopRequested = false;
+        private bool _disposed;
+        private bool _stopRequested;
         private Subject<Unit> _stopping = new();
         private Subject<string> _additionalMessages = new();
 
@@ -45,7 +45,7 @@ namespace TVRoom.Transcode
 
         public void Start()
         {
-            _logger.LogInformation("Starting ffmpeg process: {ffmpegPath} {arguments}", _process.StartInfo.FileName, _process.StartInfo.Arguments);
+            LogStartingFFmpeg(_process.StartInfo.FileName, _process.StartInfo.Arguments);
             _process.Start();
             _process.BeginErrorReadLine();
             _ffmpegOutput.Connect();
@@ -60,7 +60,7 @@ namespace TVRoom.Transcode
 
             _stopRequested = true;
 
-            _logger.LogInformation("Attempting to stop ffmpeg gracefully by writing 'q' to stdin...");
+            LogStoppingFFmpeg();
 
             // Send a "q" keypress and give ffmpeg a chance to stop gracefully.
             // If it doesn't, terminate it with extreme prejudice.
@@ -71,11 +71,11 @@ namespace TVRoom.Transcode
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending 'q' command to ffmpeg process");
+                LogErrorSendingStopCommand(ex);
             }
 
             var timeout = TimeSpan.FromSeconds(5);
-            _logger.LogInformation("Waiting for {timeoutSeconds}s for ffmpeg to stop gracefully.", timeout.TotalSeconds);
+            LogWaitingForGracefulStop(timeout.TotalSeconds);
 
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromSeconds(5));
@@ -83,15 +83,15 @@ namespace TVRoom.Transcode
             try
             {
                 await _process.WaitForExitAsync(cts.Token);
-                _logger.LogInformation("ffmpeg process has stopped gracefully.");
+                LogFFmpegStoppedGracefully();
             }
             catch (TaskCanceledException)
             {
-                _logger.LogInformation("ffmpeg did not stop gracefully in {timeoutSeconds}s", timeout.TotalSeconds);
+                LogFFmpegFailedToStopGracefully(timeout.TotalSeconds);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error waiting for process to exit");
+                LogErrorWaitingForFFmpegExit(ex);
             }
 
             Dispose();
@@ -105,7 +105,8 @@ namespace TVRoom.Transcode
             if (!_stopRequested)
             {
                 // The process exited before we stopped it, something has gone wrong.
-                _logger.LogError("ffmpeg process stopped unexpectedly!");
+
+                LogFFmpegStoppedUnexpectedly();
                 _additionalMessages.OnNext("ffmpeg process stopped unexpectedly!");
                 Dispose();
             }
@@ -125,19 +126,20 @@ namespace TVRoom.Transcode
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Exception received when attempting to check if ffmpeg process was still running");
+                LogErrorCheckingIfFFmpegRunning(ex);
             }
 
             if (!hasExited)
             {
-                _logger.LogInformation("Disposing of FFmpegProcess and ffmpeg is still running. Attempting to kill process now.");
+                LogKillingFFmpegProcess();
+                
                 try
                 {
                     _process.Kill(entireProcessTree: true);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error killing ffmpeg process");
+                    LogErrorKillingFFmpegProcess(ex);
                 }
             }
 
@@ -146,5 +148,38 @@ namespace TVRoom.Transcode
             _disposed = true;
             _stopping.OnNext(Unit.Default);
         }
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "Starting ffmpeg process: {FFmpegPath} {Arguments}")]
+        private partial void LogStartingFFmpeg(string ffmpegPath, string arguments);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "Attempting to stop ffmpeg gracefully by writing 'q' to stdin...")]
+        private partial void LogStoppingFFmpeg();
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Error sending 'q' command to ffmpeg process")]
+        private partial void LogErrorSendingStopCommand(Exception ex);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "Waiting for {TimeoutSeconds}s for ffmpeg to stop gracefully.")]
+        private partial void LogWaitingForGracefulStop(double timeoutSeconds);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "ffmpeg process has stopped gracefully.")]
+        private partial void LogFFmpegStoppedGracefully();
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "ffmpeg did not stop gracefully in {TimeoutSeconds}s")]
+        private partial void LogFFmpegFailedToStopGracefully(double timeoutSeconds);
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "Error waiting for ffmpeg process to exit")]
+        private partial void LogErrorWaitingForFFmpegExit(Exception ex);
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "ffmpeg process stopped unexpectedly!")]
+        private partial void LogFFmpegStoppedUnexpectedly();
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Exception received when attempting to check if ffmpeg process was still running")]
+        private partial void LogErrorCheckingIfFFmpegRunning(Exception ex);
+
+        [LoggerMessage(Level = LogLevel.Warning, Message = "Disposing of FFmpegProcess and ffmpeg is still running. Attempting to kill process now.")]
+        private partial void LogKillingFFmpegProcess();
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "Error killing ffmpeg process")]
+        private partial void LogErrorKillingFFmpegProcess(Exception ex);
     }
 }

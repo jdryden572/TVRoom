@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
+using Microsoft.Extensions.Logging;
 using System.Reactive.Linq;
 using TVRoom.HLS;
 
@@ -127,7 +128,8 @@ namespace TVRoom.Tests.HLS
 
         private SharedBuffer GetPayload(ReadOnlySpan<byte> data)
         {
-            return SharedBuffer.Create(new System.Buffers.ReadOnlySequence<byte>(data.ToArray()));
+            var logger = new LoggerFactory().CreateLogger<SharedBuffer>();
+            return SharedBuffer.Create(new System.Buffers.ReadOnlySequence<byte>(data.ToArray()), logger);
         }
     }
 

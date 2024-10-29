@@ -5,12 +5,18 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>15f810fa-da60-41b9-ad12-372f7f18bf0e</UserSecretsId>
+	<EnableNETAnalyzers>true</EnableNETAnalyzers>
+	<AnalysisLevel>latest-Recommended</AnalysisLevel>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="8.0.7" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -33,6 +39,10 @@
 
   <ItemGroup>
 	<ClientDependency Include="client\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 	
   <!-- Check Node.js is available and install NPM packages -->
