@@ -22,7 +22,6 @@
         display: grid;
         grid-template-columns: min-content 1fr;
         gap: 1em;
-        padding-block: 1em
     }
 
     * {

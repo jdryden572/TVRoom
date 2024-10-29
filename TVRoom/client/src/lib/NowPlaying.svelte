@@ -15,8 +15,14 @@
 </script>
 
 <div class="container">
-    <LiveNow {currentBroadcast} />
-    <div class="buttons">
+    <div class="row">
+        <LiveNow {currentBroadcast} />
+        <div class="transcode-stats">
+            <div class="header">Transcode</div> 
+            <TranscodeMeter {transcodeStats} />
+         </div>
+    </div>
+    <div class="row">
         <button class="stop-broadcast" on:click={() => client.stopBroadcast()}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <rect x="9" y="9" width="6" height="6" />
@@ -31,17 +37,33 @@
             <span>Restart stream</span>
         </button>
     </div>
-    <div class="transcode-stats">
-       <div class="header">Transcode</div> 
-       <TranscodeMeter {transcodeStats} />
-    </div>
+    
 </div>
 
 <style>
     .container {
-        display: grid;
-        grid-template-columns: auto 1fr;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
         gap: 1em;
+        justify-content: space-between;
+    }
+
+    .row {
+        display: flex;
+        align-items: flex-start;
+        gap: 1em;
+    }
+
+    .transcode-stats {
+        border: 1px solid #282828;
+        border-radius: 0.25em;   
+    }
+
+    .header {
+        padding: 0.25em 0.5em;
+        background-color: #282828;
+        border-bottom: 1px solid #282828;
     }
 
     .stop-broadcast {
@@ -68,17 +90,5 @@
 
     .restart-transcode:hover {
         color: white;
-    }
-
-    .transcode-stats {
-        margin: 1em;
-        border: 1px solid #282828;
-        border-radius: 0.25em;   
-    }
-
-    .header {
-        padding: 0.25em 0.5em;
-        background-color: #282828;
-        border-bottom: 1px solid #282828;
     }
 </style>
