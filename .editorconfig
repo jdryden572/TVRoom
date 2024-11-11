@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# CA2213: Disposable fields should be disposed
+dotnet_diagnostic.CA2213.severity = error
+
+# CA1711: Identifiers should not have incorrect suffix
+dotnet_diagnostic.CA1711.severity = none

@@ -1,5 +1,4 @@
-﻿using System.Reactive;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Reactive.Threading.Tasks;
 using TVRoom.Configuration;
@@ -46,14 +45,17 @@ namespace TVRoom.HLS
 
         public void Dispose()
         {
-            // Add new subscriber that will dispose of any further segments from the source.
-            _sources.SelectMany(s => s).Subscribe(segmentInfo => segmentInfo.Payload.Dispose());
-
             // Stop our subscription
             _unsubscribeToSources.Dispose();
 
             // Clean up any segments in our stream state
             StreamState.DisposeAllSegments();
+
+            _sources.OnCompleted();
+            _sources.Dispose();
+
+            _streamStates.OnCompleted();
+            _streamStates.Dispose();
         }
     }
 }

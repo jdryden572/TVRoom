@@ -147,6 +147,11 @@ namespace TVRoom.Transcode
             _process.Dispose();
             _disposed = true;
             _stopping.OnNext(Unit.Default);
+            _stopping.OnCompleted();
+            _stopping.Dispose();
+
+            _additionalMessages.OnCompleted();
+            _additionalMessages.Dispose();
         }
 
         [LoggerMessage(Level = LogLevel.Information, Message = "Starting ffmpeg process: {FFmpegPath} {Arguments}")]

@@ -1,5 +1,7 @@
-﻿using System.Reactive.Linq;
+﻿using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Reactive.Threading.Tasks;
 using TVRoom.Configuration;
 using TVRoom.HLS;
 using TVRoom.Transcode;
@@ -7,7 +9,7 @@ using TVRoom.Tuner;
 
 namespace TVRoom.Broadcast
 {
-    public sealed class BroadcastSession : IDisposable
+    public sealed partial class BroadcastSession : IDisposable
     {
         private static readonly TimeSpan DebugOutputRetention = TimeSpan.FromSeconds(60);
 
@@ -15,7 +17,7 @@ namespace TVRoom.Broadcast
         private readonly BroadcastHistoryService _broadcastHistoryService;
         private readonly ILogger _logger;
         private readonly BehaviorSubject<TranscodeSession> _transcodeSessions;
-        private readonly IDisposable _unsubscribeTunerStatus;
+        private readonly CompositeDisposable _cleanup;
 
         public BroadcastSession(
             BroadcastInfo broadcastInfo,
@@ -26,6 +28,8 @@ namespace TVRoom.Broadcast
             HlsConfiguration hlsConfig,
             ILogger logger)
         {
+            ArgumentNullException.ThrowIfNull(tunerStatusProvider);
+
             BroadcastInfo = broadcastInfo;
             _sessionManager = sessionManager;
             _logger = logger;
@@ -44,24 +48,32 @@ namespace TVRoom.Broadcast
             // subscribe to tuner statuses, to ensure they are collected for the duration of the broadcast.
             // Don't actually need to use them here, but this ensures no discontinuities in the status history
             // while a stream is active.
-            _unsubscribeTunerStatus = tunerStatusProvider.Statuses.Subscribe();
+            var unsubscribeTunerStatus = tunerStatusProvider.Statuses.Subscribe();
             _broadcastHistoryService = broadcastHistoryService;
 
-            for (int i = 0; i < 100; i++)
+            CancellationTokenSource autoStopCts = new(hlsConfig.MaxDuration);
+            var unsubscribeToAutoStop = autoStopCts.Token.Register(() =>
             {
-                
-            }
+                LogBroadcastReachedMaxDuration(hlsConfig.MaxDuration);
+                Task.Run(StopAsync);
+            });
+
+            _cleanup = new CompositeDisposable(
+                unsubscribeTunerStatus, 
+                unsubscribeToAutoStop, 
+                autoStopCts,
+                _transcodeSessions);
         }
 
         public BroadcastInfo BroadcastInfo { get; }
 
         public MergedHlsLiveStream HlsLiveStream { get; }
 
-        public TranscodeSession TranscodeSession => _transcodeSessions.Value;
+        public IObservable<string> DebugOutput { get; }
 
         public IObservable<TranscodeStats> TranscodeStats => _transcodeSessions.Select(s => s.Stats).Switch();
 
-        public IObservable<string> DebugOutput { get; }
+        public Task Finished => _transcodeSessions.ToTask();
 
         public async Task StartAsync()
         {
@@ -73,6 +85,7 @@ namespace TVRoom.Broadcast
         {
             await _broadcastHistoryService.EndCurrentBroadcast();
             await TranscodeSession.StopAsync();
+            _transcodeSessions.OnCompleted();
         }
 
         public async Task RestartTranscodeAsync()
@@ -91,7 +104,13 @@ namespace TVRoom.Broadcast
             TranscodeSession.Dispose();
             HlsLiveStream.Dispose();
             _transcodeSessions.OnCompleted();
-            _unsubscribeTunerStatus.Dispose();
+            _transcodeSessions.Dispose();
+            _cleanup.Dispose();
         }
+
+        private TranscodeSession TranscodeSession => _transcodeSessions.Value;
+
+        [LoggerMessage(LogLevel.Warning, "Broadcast has reached is max duration of {MaxDuration}. Stopping it now.")]
+        private partial void LogBroadcastReachedMaxDuration(TimeSpan maxDuration);
     }
 }

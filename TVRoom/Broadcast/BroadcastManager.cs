@@ -12,7 +12,6 @@ namespace TVRoom.Broadcast
         private readonly HlsConfiguration _hlsConfiguration;
         private readonly ILogger _logger;
         private BroadcastSession? _currentSession;
-        private CancellationTokenSource _autoStopBroadcastCts = new();
 
         public BroadcastManager(
             IHubContext<ControlPanelHub, IControlPanelClient> controlPanelHub,
@@ -42,27 +41,29 @@ namespace TVRoom.Broadcast
 
             await session.StartAsync();
 
-            _autoStopBroadcastCts.CancelAfter(_hlsConfiguration.MaxDuration);
-            _autoStopBroadcastCts.Token.Register(() => Task.Run(StopSessionAsync));
-
             _currentSession = session;
             await _controlPanelHub.Clients.All.BroadcastStarted(session.BroadcastInfo);
 
-            // Start session on background task and notify clients when it is ready
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await session.HlsLiveStream.Ready;
-                    await _controlPanelHub.Clients.All.BroadcastReady(session.BroadcastInfo);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error while waiting for broadcast to become ready");
-                }
-            });
+            _ = NotifyWhenReady(session);
+            _ = NotifyWhenStopped(session);
 
             return session.BroadcastInfo;
+        }
+
+        private async Task NotifyWhenReady(BroadcastSession session)
+        {
+            await session.HlsLiveStream.Ready;
+            await _controlPanelHub.Clients.All.BroadcastReady(session.BroadcastInfo);
+        }
+
+        private async Task NotifyWhenStopped(BroadcastSession session)
+        {
+            await session.Finished;
+
+            session.Dispose();
+            _currentSession = null;
+
+            await _controlPanelHub.Clients.All.BroadcastStopped();
         }
 
         public async Task StopSessionAsync()
@@ -70,11 +71,6 @@ namespace TVRoom.Broadcast
             if (_currentSession is not null)
             {
                 await _currentSession.StopAsync();
-                _currentSession.Dispose();
-                _currentSession = null;
-                _autoStopBroadcastCts = new();
-
-                await _controlPanelHub.Clients.All.BroadcastStopped();
             }
         }
 

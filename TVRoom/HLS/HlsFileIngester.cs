@@ -60,7 +60,7 @@ namespace TVRoom.HLS
                     continue;
                 }
 
-                var latestSegmentRef = streamPlaylist.SegmentReferences.LastOrDefault();
+                var latestSegmentRef = streamPlaylist.SegmentReferences[^1];
                 if (latestSegmentRef.FileName == segmentQueue.Peek().FileName)
                 {
                     var segment = segmentQueue.Dequeue();
