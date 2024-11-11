@@ -17,6 +17,7 @@ namespace TVRoom.Transcode
                 }
 
                 var payload = await request.ReadToSharedBufferAsync($"master.m3u8_{DateTime.UtcNow:O}");
+                payload.UpdatedUseLocation(BufferUseLocation.ApiEndpoint);
                 await fileIngester.IngestStreamFileAsync(new IngestMasterPlaylist(payload));
                 return Results.NoContent();
             });
@@ -29,6 +30,7 @@ namespace TVRoom.Transcode
                 }
 
                 var payload = await request.ReadToSharedBufferAsync($"live.m3u8_{DateTime.UtcNow:O}");
+                payload.UpdatedUseLocation(BufferUseLocation.ApiEndpoint);
                 await fileIngester.IngestStreamFileAsync(new IngestStreamPlaylist(payload));
                 return Results.NoContent();
             });
@@ -41,6 +43,7 @@ namespace TVRoom.Transcode
                 }
 
                 var payload = await request.ReadToSharedBufferAsync($"{segment}_{DateTime.UtcNow:O}");
+                payload.UpdatedUseLocation(BufferUseLocation.ApiEndpoint);
                 await fileIngester.IngestStreamFileAsync(new IngestStreamSegment(segment, payload));
                 return Results.NoContent();
             });
@@ -51,6 +54,7 @@ namespace TVRoom.Transcode
             {
                 RentedBufferCount = SharedBuffer.RentedBufferCount.Value,
                 RentedBytes = SharedBuffer.RentedBytes.Value,
+                LiveBuffers = SharedBuffer.LiveBuffers.OrderBy(kvp => kvp.Key).ToArray(),
             });
 
             return app;

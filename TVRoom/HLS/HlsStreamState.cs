@@ -38,6 +38,8 @@ namespace TVRoom.HLS
 
         public override HlsStreamState WithNewSegment(HlsSegmentInfo segmentInfo)
         {
+            segmentInfo.Payload.UpdatedUseLocation(BufferUseLocation.HlsStreamNotReady_WithNewSegment);
+
             ArgumentOutOfRangeException.ThrowIfLessThan(HlsListSize, 2);
 
             var segment = new HlsSegmentEntry(0, segmentInfo.Duration, segmentInfo.Payload);
@@ -74,6 +76,8 @@ namespace TVRoom.HLS
 
         public override HlsStreamState WithNewSegment(HlsSegmentInfo segmentInfo)
         {
+            segmentInfo.Payload.UpdatedUseLocation(BufferUseLocation.HlsStreamStateWithSegments_WithNewSegment);
+
             var latestIndex = LiveSegments[^1].Index;
             var newSegmentEntry = new HlsSegmentEntry(latestIndex + 1, segmentInfo.Duration, segmentInfo.Payload);
 

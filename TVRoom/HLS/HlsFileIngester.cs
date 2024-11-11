@@ -32,6 +32,8 @@ namespace TVRoom.HLS
 
             await foreach (var file in _channel.Reader.ReadAllAsync())
             {
+                file.Payload.UpdatedUseLocation(BufferUseLocation.Ingest);
+
                 if (file is IngestMasterPlaylist master && master.TryParse(out var parsedMasterPlaylist))
                 {
                     masterPlaylist = parsedMasterPlaylist;
@@ -60,7 +62,7 @@ namespace TVRoom.HLS
                     continue;
                 }
 
-                var latestSegmentRef = streamPlaylist.SegmentReferences.LastOrDefault();
+                var latestSegmentRef = streamPlaylist.SegmentReferences[^1];
                 if (latestSegmentRef.FileName == segmentQueue.Peek().FileName)
                 {
                     var segment = segmentQueue.Dequeue();
@@ -70,6 +72,8 @@ namespace TVRoom.HLS
                         streamPlaylist.TargetDuration,
                         latestSegmentRef.Duration,
                         segment.Payload);
+
+                    segment.Payload.UpdatedUseLocation(BufferUseLocation.CreateSegmentInfo);
 
                     obs.OnNext(info);
                 }

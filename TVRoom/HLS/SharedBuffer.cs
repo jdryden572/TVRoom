@@ -1,7 +1,9 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 namespace TVRoom.HLS
 {
@@ -10,6 +12,24 @@ namespace TVRoom.HLS
         ReadOnlySpan<byte> GetSpan();
         ReadOnlyMemory<byte> GetMemory();
     }
+
+    [Flags]
+    [JsonConverter(typeof(JsonStringEnumConverter<BufferUseLocation>))]
+    public enum BufferUseLocation
+    {
+        Unknown = 1 << 15,
+        Created = 1 << 0,
+        ApiEndpoint = 1 << 2,
+        Ingest = 1 << 3,
+        CreateSegmentInfo = 1 << 4,
+        HlsStreamNotReady_WithNewSegment = 1 << 5,
+        HlsStreamStateWithSegments_WithNewSegment = 1 << 6,
+        DisposeCalledOnBuffer = 1 << 7,
+        DisposeCalledOnLease = 1 << 8,
+        RefCountZeroAfterDispose = 1 << 9,
+    }
+
+    public record struct BufferInfo(int Size, BufferUseLocation UsedLocations);
 
     public sealed class InterlockedLong
     {
@@ -28,6 +48,7 @@ namespace TVRoom.HLS
     {
         public static InterlockedLong RentedBytes { get; } = new();
         public static InterlockedLong RentedBufferCount { get; } = new();
+        public static ConcurrentDictionary<string, BufferInfo> LiveBuffers { get; } = new();
 
         public static long MaxFileLength { get; } = 10 * 1024 * 1024; // 10MB
         private static readonly ArrayPool<byte> _largePool = ArrayPool<byte>.Create((int)MaxFileLength, 20);
@@ -55,6 +76,10 @@ namespace TVRoom.HLS
             var buffer = MemoryOwner<byte>.Allocate((int)source.Length, _largePool);
             RentedBytes.Add(source.Length);
             RentedBufferCount.Add(1);
+            if (identifier is not null)
+            {
+                LiveBuffers.TryAdd(identifier, new BufferInfo((int)source.Length, BufferUseLocation.Created));
+            }
 
             source.CopyTo(buffer.Span);
             return new SharedBuffer(buffer, identifier, logger);
@@ -67,6 +92,16 @@ namespace TVRoom.HLS
 #if DEBUG
             Debug.Fail($"Shared buffer is being finalized size={_buffer.Length} id='{_identifier}'");
 #endif
+        }
+
+        public void UpdatedUseLocation(BufferUseLocation location)
+        {
+            if (_identifier is not null && LiveBuffers.TryGetValue(_identifier, out var existing))
+            {
+                LiveBuffers.TryUpdate(_identifier, 
+                    existing with { UsedLocations = existing.UsedLocations | location }, 
+                    existing);
+            }
         }
 
         public bool IsBufferDisposed
@@ -93,6 +128,7 @@ namespace TVRoom.HLS
 
         public void Dispose()
         {
+            UpdatedUseLocation(BufferUseLocation.DisposeCalledOnBuffer);
             lock (_lock)
             {
                 _disposed = true;
@@ -115,18 +151,22 @@ namespace TVRoom.HLS
 
             if (bufferToReturn is not null)
             {
+                UpdatedUseLocation(BufferUseLocation.RefCountZeroAfterDispose);
+
                 var size = bufferToReturn.Length;
                 GC.SuppressFinalize(this);
                 bufferToReturn.Dispose();
 
                 RentedBytes.Add(-1 * size);
                 RentedBufferCount.Add(-1);
+                LiveBuffers.TryRemove(_identifier, out _);
                 LogBufferReturned(bufferToReturn.Length, _identifier);
             }
         }
 
         private void ReaderDisposed()
         {
+            UpdatedUseLocation(BufferUseLocation.DisposeCalledOnLease);
             lock (_lock)
             {
                 _refCount--;
