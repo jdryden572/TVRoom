@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
-using System.Diagnostics;
 using System.Globalization;
-using Utf8StringInterpolation;
+using System.IO.Pipelines;
+using System.Text.Unicode;
 
 namespace TVRoom.HLS
 {
@@ -129,18 +129,29 @@ namespace TVRoom.HLS
             {
                 httpContext.Response.Headers.ContentType = "audio/mpegurl";
 
-                using (new CultureContext(CultureInfo.InvariantCulture))
-                {
-                    Utf8String.Format(httpContext.Response.BodyWriter,
-                        $"""
-                        #EXTM3U
-                        #EXT-X-VERSION:{state.HlsVersion}
-                        #EXT-X-STREAM-INF:{state.StreamInfo}
-                        live.m3u8
-                        """);
-                }
+                WriteTo(httpContext.Response.BodyWriter);
 
                 await httpContext.Response.BodyWriter.FlushAsync();
+            }
+
+            private void WriteTo(PipeWriter writer)
+            {
+                int written;
+                Span<byte> span = writer.GetSpan(1024);
+                while (!Utf8.TryWrite(span, 
+                    CultureInfo.InvariantCulture,
+                    $"""
+                    #EXTM3U
+                    #EXT-X-VERSION:{state.HlsVersion}
+                    #EXT-X-STREAM-INF:{state.StreamInfo}
+                    live.m3u8
+                    """,
+                    out written))
+                {
+                    span = writer.GetSpan(span.Length * 2);
+                }
+
+                writer.Advance(written);
             }
         }
 
@@ -150,24 +161,35 @@ namespace TVRoom.HLS
             {
                 httpContext.Response.Headers.ContentType = "audio/mpegurl";
 
-                using (new CultureContext(CultureInfo.InvariantCulture))
-                {
-                    var writer = httpContext.Response.BodyWriter;
-                    Utf8String.Format(writer,
-                         $"""
-                        #EXTM3U
-                        #EXT-X-VERSION:{state.HlsVersion}
-                        #EXT-X-TARGETDURATION:{state.TargetDuration}
-                        #EXT-X-MEDIA-SEQUENCE:{state.MediaSequence}
-                        """);
+                var writer = httpContext.Response.BodyWriter;
+                WriteTo(writer);
 
-                    foreach (var segment in state.LiveSegments)
-                    {
-                        segment.WriteTo(writer);
-                    }
+                foreach (var segment in state.LiveSegments)
+                {
+                    segment.WriteTo(writer);
                 }
 
                 await httpContext.Response.BodyWriter.FlushAsync();
+            }
+
+            private void WriteTo(PipeWriter writer)
+            {
+                int written;
+                Span<byte> span = writer.GetSpan(1024);
+                while (!Utf8.TryWrite(span,
+                    CultureInfo.InvariantCulture,
+                    $"""
+                    #EXTM3U
+                    #EXT-X-VERSION:{state.HlsVersion}
+                    #EXT-X-TARGETDURATION:{state.TargetDuration}
+                    #EXT-X-MEDIA-SEQUENCE:{state.MediaSequence}
+                    """, 
+                    out written))
+                {
+                    span = writer.GetSpan(span.Length * 2);
+                }
+
+                writer.Advance(written);
             }
         }
 
@@ -189,16 +211,26 @@ namespace TVRoom.HLS
         public HlsSegmentFollowedByDiscontinuity WithDiscontinuity() => 
             new HlsSegmentFollowedByDiscontinuity(Index, Duration, Payload);
 
-        public virtual void WriteTo(IBufferWriter<byte> writer)
+        public virtual void WriteTo(PipeWriter writer)
         {
-            Utf8String.Format(writer, $"\r\n#EXTINF:{Duration:N6},\r\nlive{Index}.ts");
+            int written;
+            Span<byte> span = writer.GetSpan(128);
+            while (!Utf8.TryWrite(span, 
+                CultureInfo.InvariantCulture, 
+                $"\r\n#EXTINF:{Duration:N6},\r\nlive{Index}.ts", 
+                out written))
+            {
+                span = writer.GetSpan(span.Length * 2);
+            }
+
+            writer.Advance(written);
         }
     }
 
     public sealed record HlsSegmentFollowedByDiscontinuity(int Index, double Duration, SharedBuffer Payload) 
         : HlsSegmentEntry(Index, Duration, Payload)
     {
-        public override void WriteTo(IBufferWriter<byte> writer)
+        public override void WriteTo(PipeWriter writer)
         {
             base.WriteTo(writer);
             writer.Write("\r\n#EXT-X-DISCONTINUITY"u8);
