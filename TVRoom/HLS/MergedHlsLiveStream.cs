@@ -48,9 +48,6 @@ namespace TVRoom.HLS
             // Stop our subscription
             _unsubscribeToSources.Dispose();
 
-            // Clean up any segments in our stream state
-            StreamState.DisposeAllSegments();
-
             _sources.OnCompleted();
             _sources.Dispose();
 

@@ -12,12 +12,15 @@ namespace TVRoom.Transcode
         private readonly ILogger _logger;
         private readonly FFmpegProcess _ffmpegProcess;
 
-        public TranscodeSession(TranscodeSessionManager transcodeManager, HlsConfiguration hlsConfig, ILogger logger, string input, TranscodeConfigDto transcodeConfig)
+        public TranscodeSession(TranscodeSessionManager transcodeManager, HlsConfiguration hlsConfig, ILogger logger, string input, TranscodeConfigDto transcodeConfig, ScopedBufferPool bufferPool)
         {
             _transcodeManager = transcodeManager;
             _hlsConfig = hlsConfig;
             _logger = logger;
             Id = GenerateTranscodeId();
+
+            BufferPool = bufferPool;
+            FileIngester = new(bufferPool);
 
             var hlsSettings = $"-f hls -hls_time {_hlsConfig.HlsTime} -hls_list_size {_hlsConfig.HlsListSize}";
             var playlist = $"{_hlsConfig.HlsIngestBaseAddress}/{Id}/live.m3u8";
@@ -42,8 +45,9 @@ namespace TVRoom.Transcode
 
         public IObservable<TranscodeStats> Stats { get; }
 
-        public HlsFileIngester FileIngester { get; } = new();
+        public ScopedBufferPool BufferPool { get; }
 
+        public HlsFileIngester FileIngester { get; }
 
         public void Start()
         {

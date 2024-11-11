@@ -6,9 +6,12 @@ namespace TVRoom.HLS
     public sealed class HlsFileIngester : IDisposable
     {
         private readonly Channel<IngestHlsFile> _channel = Channel.CreateBounded<IngestHlsFile>(new BoundedChannelOptions(10));
+        private readonly ScopedBufferPool _bufferPool;
 
-        public HlsFileIngester()
+        public HlsFileIngester(ScopedBufferPool bufferPool)
         {
+            _bufferPool = bufferPool;
+
             // Use Publish() to ensure the observable factory is started immediately.
             var segmentInfos = Observable.Create<HlsSegmentInfo>(ProcessIngestedFiles).Publish();
             segmentInfos.Connect();
@@ -16,6 +19,24 @@ namespace TVRoom.HLS
         }
 
         public IObservable<HlsSegmentInfo> StreamSegments { get; }
+
+        public async Task IngestMasterPlaylist(HttpRequest request)
+        {
+            var payload = await _bufferPool.ReadToSharedBufferAsync(request);
+            await IngestStreamFileAsync(new IngestMasterPlaylist(payload));
+        }
+
+        public async Task IngestStreamPlaylist(HttpRequest request)
+        {
+            var payload = await _bufferPool.ReadToSharedBufferAsync(request);
+            await IngestStreamFileAsync(new IngestStreamPlaylist(payload));
+        }
+
+        public async Task IngestStreamSegment(string fileName, HttpRequest request)
+        {
+            var payload = await _bufferPool.ReadToSharedBufferAsync(request);
+            await IngestStreamFileAsync(new IngestStreamSegment(fileName, payload));
+        }
 
         public async Task IngestStreamFileAsync(IngestHlsFile ingestFile) => await _channel.Writer.WriteAsync(ingestFile);
 

@@ -17,10 +17,10 @@ namespace TVRoom.Transcode
             _transcodeConfigService = transcodeConfigService;
         }
 
-        public async Task<TranscodeSession> CreateTranscode(string channelUrl, ILogger logger)
+        public async Task<TranscodeSession> CreateTranscode(string channelUrl, ILogger logger, ScopedBufferPool bufferPool)
         {
             var transcodeConfig = await _transcodeConfigService.GetLatestConfig();
-            var transcode = new TranscodeSession(this, _hlsConfig, logger, channelUrl, transcodeConfig);
+            var transcode = new TranscodeSession(this, _hlsConfig, logger, channelUrl, transcodeConfig, bufferPool);
             _fileIngesters.TryAdd(transcode.Id, transcode.FileIngester);
             return transcode;
         }

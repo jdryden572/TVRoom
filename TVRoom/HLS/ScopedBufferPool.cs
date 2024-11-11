@@ -1,12 +1,20 @@
-﻿using System.IO.Pipelines;
-using TVRoom.HLS;
+﻿using System.Collections.Concurrent;
 
-namespace TVRoom.Broadcast
+namespace TVRoom.HLS
 {
-    public static class ReadSharedBufferExtentions
+    public sealed class ScopedBufferPool : IDisposable
     {
-        public static async Task<SharedBuffer> ReadToSharedBufferAsync(this HttpRequest request, string identifier)
+        private readonly object _lock = new();
+        private readonly ConcurrentDictionary<Guid, SharedBuffer> _liveBuffers = new();
+        private bool _disposed;
+
+        public async Task<SharedBuffer> ReadToSharedBufferAsync(HttpRequest request)
         {
+            lock (_lock)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+            }
+
             var reader = request.BodyReader;
             var logger = request.HttpContext.RequestServices.GetRequiredService<ILogger<SharedBuffer>>();
 
@@ -25,7 +33,8 @@ namespace TVRoom.Broadcast
 
                     if (result.IsCompleted || result.IsCanceled)
                     {
-                        var sharedBuffer = SharedBuffer.Create(buffer, logger, identifier);
+                        var sharedBuffer = SharedBuffer.Create(buffer, logger, this);
+                        _liveBuffers.TryAdd(sharedBuffer.Id, sharedBuffer);
                         reader.AdvanceTo(buffer.End);
                         return sharedBuffer;
                     }
@@ -36,6 +45,24 @@ namespace TVRoom.Broadcast
             finally
             {
                 await reader.CompleteAsync();
+            }
+        }
+
+        public void BufferReturned(SharedBuffer buffer)
+        {
+            _liveBuffers.TryRemove(buffer.Id, out _);
+        }
+
+        public void Dispose()
+        {
+            lock (_lock)
+            {
+                _disposed = true;
+            }
+
+            foreach (var buffer in _liveBuffers.Values)
+            {
+                buffer.Dispose();
             }
         }
     }

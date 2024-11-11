@@ -18,6 +18,7 @@ namespace TVRoom.Broadcast
         private readonly ILogger _logger;
         private readonly BehaviorSubject<TranscodeSession> _transcodeSessions;
         private readonly CompositeDisposable _cleanup;
+        private readonly ScopedBufferPool _bufferPool;
 
         public BroadcastSession(
             BroadcastInfo broadcastInfo,
@@ -33,6 +34,7 @@ namespace TVRoom.Broadcast
             BroadcastInfo = broadcastInfo;
             _sessionManager = sessionManager;
             _logger = logger;
+            _bufferPool = transcodeSession.BufferPool;
             _transcodeSessions = new(transcodeSession);
             HlsLiveStream = new(transcodeSession.FileIngester.StreamSegments, hlsConfig);
 
@@ -62,7 +64,8 @@ namespace TVRoom.Broadcast
                 unsubscribeTunerStatus, 
                 unsubscribeToAutoStop, 
                 autoStopCts,
-                _transcodeSessions);
+                _transcodeSessions,
+                _bufferPool);
         }
 
         public BroadcastInfo BroadcastInfo { get; }
@@ -93,7 +96,7 @@ namespace TVRoom.Broadcast
             await TranscodeSession.StopAsync();
             TranscodeSession.Dispose();
 
-            var newTranscode = await _sessionManager.CreateTranscode(BroadcastInfo.ChannelInfo.Url, _logger);
+            var newTranscode = await _sessionManager.CreateTranscode(BroadcastInfo.ChannelInfo.Url, _logger, _bufferPool);
             HlsLiveStream.SetNewSource(newTranscode.FileIngester.StreamSegments);
             _transcodeSessions.OnNext(newTranscode);
             newTranscode.Start();

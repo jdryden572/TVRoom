@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace TVRoom.HLS
 {
+
     public interface IBufferLease : IDisposable
     {
         ReadOnlySpan<byte> GetSpan();
@@ -33,41 +34,43 @@ namespace TVRoom.HLS
         private static readonly ArrayPool<byte> _largePool = ArrayPool<byte>.Create((int)MaxFileLength, 20);
 
         private readonly object _lock = new();
-        private readonly string _identifier;
         private readonly ILogger _logger;
+        private readonly ScopedBufferPool _pool;
 
         // Synchronize access to these with the lock
         private MemoryOwner<byte> _buffer;
         private int _refCount;
         private bool _disposed;
 
-        private SharedBuffer(MemoryOwner<byte> buffer, string? identifier, ILogger logger)
+        private SharedBuffer(MemoryOwner<byte> buffer, ILogger logger, ScopedBufferPool pool)
         {
             _buffer = buffer;
-            _identifier = identifier ?? string.Empty;
             _logger = logger;
+            _pool = pool;
 
-            LogBufferAllocated(_buffer.Length, _identifier);
+            LogBufferAllocated(_buffer.Length, Id);
         }
 
-        public static SharedBuffer Create(ReadOnlySequence<byte> source, ILogger logger, string? identifier = null)
+        public static SharedBuffer Create(ReadOnlySequence<byte> source, ILogger logger, ScopedBufferPool pool)
         {
             var buffer = MemoryOwner<byte>.Allocate((int)source.Length, _largePool);
             RentedBytes.Add(source.Length);
             RentedBufferCount.Add(1);
 
             source.CopyTo(buffer.Span);
-            return new SharedBuffer(buffer, identifier, logger);
+            return new SharedBuffer(buffer, logger, pool);
         }
 
         ~SharedBuffer()
         {
-            LogSharedBufferFinalized(_buffer.Length, _identifier);
+            LogSharedBufferFinalized(_buffer.Length, Id);
             _buffer.Dispose();
 #if DEBUG
-            Debug.Fail($"Shared buffer is being finalized size={_buffer.Length} id='{_identifier}'");
+            Debug.Fail($"Shared buffer is being finalized size={_buffer.Length} id='{Id}'");
 #endif
         }
+
+        public Guid Id { get; } = Guid.NewGuid();
 
         public bool IsBufferDisposed
         {
@@ -115,13 +118,15 @@ namespace TVRoom.HLS
 
             if (bufferToReturn is not null)
             {
+                _pool.BufferReturned(this);
+
                 var size = bufferToReturn.Length;
                 GC.SuppressFinalize(this);
                 bufferToReturn.Dispose();
 
                 RentedBytes.Add(-1 * size);
                 RentedBufferCount.Add(-1);
-                LogBufferReturned(bufferToReturn.Length, _identifier);
+                LogBufferReturned(bufferToReturn.Length, Id);
             }
         }
 
@@ -161,12 +166,12 @@ namespace TVRoom.HLS
         }
 
         [LoggerMessage(Level = LogLevel.Trace, Message = "Allocated shared buffer size={Size} id='{Id}'")]
-        private partial void LogBufferAllocated(int size, string id);
+        private partial void LogBufferAllocated(int size, Guid id);
 
         [LoggerMessage(Level = LogLevel.Trace, Message = "Returned shared buffer size={Size} id='{Id}'")]
-        private partial void LogBufferReturned(int size, string id);
+        private partial void LogBufferReturned(int size, Guid id);
 
         [LoggerMessage(Level = LogLevel.Warning, Message = "Shared buffer is being finalized size={Size} id='{Id}'")]
-        private partial void LogSharedBufferFinalized(int size, string id);
+        private partial void LogSharedBufferFinalized(int size, Guid id);
     }
 }

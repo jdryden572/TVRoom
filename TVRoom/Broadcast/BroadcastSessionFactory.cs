@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using TVRoom.Transcode;
 using TVRoom.Configuration;
+using TVRoom.HLS;
 
 namespace TVRoom.Broadcast
 {
@@ -32,8 +33,9 @@ namespace TVRoom.Broadcast
             // Generate unique session and save broadcast info (usable to watch the stream)
             var sessionId = GenerateSessionId();
 
+            var bufferPool = new ScopedBufferPool();
             var logger = _loggerFactory.CreateLogger($"Broadcast-{sessionId}");
-            var transcode = await _transcodeSessionManager.CreateTranscode(channelInfo.Url, logger);
+            var transcode = await _transcodeSessionManager.CreateTranscode(channelInfo.Url, logger, bufferPool);
             var broadcastInfo = new BroadcastInfo(channelInfo, sessionId, transcode.FFmpegArguments);
             return new BroadcastSession(
                 broadcastInfo,

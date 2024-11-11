@@ -18,12 +18,6 @@ namespace TVRoom.HLS
         public abstract HlsStreamState WithNewSegment(HlsSegmentInfo segmentInfo);
         public abstract HlsStreamState WithNewDiscontinuity();
 
-        // Intentionally not using IDisposable pattern here, so
-        // it doesn't imply the objects should always be disposed.
-        public virtual void DisposeAllSegments()
-        {
-        }
-
         public abstract IResult GetMasterPlaylist();
         public abstract IResult GetPlaylist();
         public abstract IResult GetSegment(int index);
@@ -95,19 +89,6 @@ namespace TVRoom.HLS
         }
 
         public int MediaSequence => LiveSegments[0].Index;
-
-        public override void DisposeAllSegments()
-        {
-            foreach (var segment in LiveSegments)
-            {
-                segment.Payload.Dispose();
-            }
-
-            foreach (var segment in PreviousSegments)
-            {
-                segment.Payload.Dispose();
-            }
-        }
 
         public override IResult GetMasterPlaylist() => new MasterPlaylistResult(this);
 

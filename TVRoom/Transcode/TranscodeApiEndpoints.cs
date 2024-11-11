@@ -1,5 +1,4 @@
-﻿using TVRoom.Broadcast;
-using TVRoom.HLS;
+﻿using TVRoom.HLS;
 
 namespace TVRoom.Transcode
 {
@@ -16,8 +15,7 @@ namespace TVRoom.Transcode
                     return Results.NotFound();
                 }
 
-                var payload = await request.ReadToSharedBufferAsync($"master.m3u8_{DateTime.UtcNow:O}");
-                await fileIngester.IngestStreamFileAsync(new IngestMasterPlaylist(payload));
+                await fileIngester.IngestMasterPlaylist(request);
                 return Results.NoContent();
             });
 
@@ -28,8 +26,7 @@ namespace TVRoom.Transcode
                     return Results.NotFound();
                 }
 
-                var payload = await request.ReadToSharedBufferAsync($"live.m3u8_{DateTime.UtcNow:O}");
-                await fileIngester.IngestStreamFileAsync(new IngestStreamPlaylist(payload));
+                await fileIngester.IngestStreamPlaylist(request);
                 return Results.NoContent();
             });
 
@@ -40,8 +37,7 @@ namespace TVRoom.Transcode
                     return Results.NotFound();
                 }
 
-                var payload = await request.ReadToSharedBufferAsync($"{segment}_{DateTime.UtcNow:O}");
-                await fileIngester.IngestStreamFileAsync(new IngestStreamSegment(segment, payload));
+                await fileIngester.IngestStreamSegment(segment, request);
                 return Results.NoContent();
             });
 
