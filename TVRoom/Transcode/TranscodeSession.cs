@@ -79,6 +79,7 @@ namespace TVRoom.Transcode
         {
             _ffmpegProcess.Dispose();
             _transcodeManager.Remove(Id);
+            FileIngester.Dispose();
         }
 
         [LoggerMessage(Level = LogLevel.Warning, Message = "Starting transcode session {Id}")]

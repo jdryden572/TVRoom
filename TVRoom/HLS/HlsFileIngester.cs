@@ -95,12 +95,6 @@ namespace TVRoom.HLS
                     obs.OnNext(info);
                 }
             }
-
-            // Dispose any segments we haven't processed
-            while (segmentQueue.TryDequeue(out var segment))
-            {
-                segment.Payload.Dispose();
-            }
         }
     }
 }
