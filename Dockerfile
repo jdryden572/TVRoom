@@ -17,8 +17,14 @@ RUN dotnet publish TVRoom/TVRoom.csproj -c release -o /app --no-restore
 
 # final stage/image
 FROM lscr.io/linuxserver/ffmpeg:7.0.2
-RUN apt-get update
+
+# Add Ubuntu backports repository https://learn.microsoft.com/en-us/dotnet/core/install/linux-ubuntu#register-the-ubuntu-net-backports-package-repository
+RUN apt update
+RUN apt-get install -y software-properties-common
+RUN add-apt-repository -y ppa:dotnet/backports
+# Install aspnetcore runtime
 RUN apt-get install -y aspnetcore-runtime-9.0
+
 WORKDIR /app
 COPY --from=build /app ./
 ENTRYPOINT ["dotnet", "TVRoom.dll"]
