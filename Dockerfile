@@ -18,7 +18,7 @@ RUN dotnet publish TVRoom/TVRoom.csproj -c release -o /app --no-restore
 # final stage/image
 FROM lscr.io/linuxserver/ffmpeg:7.0.2
 RUN apt-get update
-RUN apt-get install -y aspnetcore-runtime-9.0
+RUN apt-get install -y aspnetcore-runtime-9.0.0
 WORKDIR /app
 COPY --from=build /app ./
 ENTRYPOINT ["dotnet", "TVRoom.dll"]
