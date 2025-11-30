@@ -1,4 +1,6 @@
-﻿namespace TVRoom.Broadcast
+﻿using TVRoom.Authorization;
+
+namespace TVRoom.Broadcast
 {
     public static class BroadcastApiEndpoints
     {
@@ -42,6 +44,16 @@
             group
                 .RequireCors("AllowAll")
                 .AllowAnonymous();
+
+            app.MapGet("/broadcast/current", (BroadcastManager broadcastManager, HttpRequest request) =>
+            {
+                var nowPlaying = broadcastManager.NowPlaying;
+                if (nowPlaying is null)
+                {
+                    return Results.Ok(Array.Empty<string>());
+                }
+                return Results.Ok(new[] { $"{request.Scheme}://{request.Host}/streams/{nowPlaying.SessionId}/master.m3u8" });
+            }).RequireAuthorization(Policies.RequireApiViewer);
 
             return app;
         }

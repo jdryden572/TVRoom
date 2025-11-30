@@ -15,7 +15,7 @@ builder.Services.AddSignalR();
 builder.Services.AddRazorPages();
 builder.Services.AddViteServices();
 
-builder.Services.AddGoogleAuthenticationServices(builder.Configuration);
+builder.Services.AddTVRoomAuthenticationServices(builder.Configuration);
 builder.Services.AddTVRoomAuthorizationServices();
 builder.Services.AddTVRoomHlsServices(builder.Configuration);
 builder.Services.AddTVRoomBroadcastServices();
@@ -82,6 +82,7 @@ app.MapTranscodeApiEndpoints();
 app.MapBroadcastLogEndpoints();
 app.MapTunerApiEndpoints();
 app.MapConfigurationApiEndpoints();
+app.MapSignInEndpoints();
 app.MapUserApiEndpoints();
 
 app.Run();

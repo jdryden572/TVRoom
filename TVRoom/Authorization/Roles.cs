@@ -10,5 +10,6 @@
     {
         public const string RequireAdministrator = "RequireAdministrator";
         public const string RequireViewer = "RequireViewer";
+        public const string RequireApiViewer = "RequireApiViewer";
     }
 }

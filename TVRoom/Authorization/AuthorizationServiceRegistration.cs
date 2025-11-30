@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 
 namespace TVRoom.Authorization
 {
     public static class AuthorizationServiceRegistration
     {
-        public static IServiceCollection AddGoogleAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddTVRoomAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(cookie =>
@@ -32,7 +33,8 @@ namespace TVRoom.Authorization
                         }
                         await onRedirectToAuth(ctx);
                     };
-                });
+                })
+                .AddBearerToken();
 
             return services;
         }
@@ -47,9 +49,15 @@ namespace TVRoom.Authorization
                 .RequireRole(Roles.Administrator)
                 .Build();
 
+            var apiViewerPolicy = new AuthorizationPolicyBuilder(BearerTokenDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser()
+                .RequireRole(Roles.Viewer)
+                .Build();
+
             services.AddAuthorizationBuilder()
                 .AddPolicy(Policies.RequireViewer, viewerPolicy)
                 .AddPolicy(Policies.RequireAdministrator, adminPolicy)
+                .AddPolicy(Policies.RequireApiViewer, apiViewerPolicy)
                 .SetDefaultPolicy(viewerPolicy)
                 .SetFallbackPolicy(viewerPolicy);
 

@@ -3,6 +3,7 @@ using TVRoom.Persistence;
 
 namespace TVRoom.Authorization
 {
+
     public static class UserApiEndpoints
     {
         public static IEndpointRouteBuilder MapUserApiEndpoints(this IEndpointRouteBuilder app)
