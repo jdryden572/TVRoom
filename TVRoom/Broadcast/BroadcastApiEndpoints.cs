@@ -1,4 +1,5 @@
 ﻿using TVRoom.Authorization;
+using TVRoom.Tuner;
 
 namespace TVRoom.Broadcast
 {
@@ -52,7 +53,13 @@ namespace TVRoom.Broadcast
                 {
                     return Results.Ok(Array.Empty<string>());
                 }
-                return Results.Ok(new[] { $"{request.Scheme}://{request.Host}/streams/{nowPlaying.SessionId}/master.m3u8" });
+
+                var channelInfo = nowPlaying.ChannelInfo with
+                {
+                    Url = $"{request.Scheme}://{request.Host}/streams/{nowPlaying.SessionId}/live.m3u8"
+                };
+
+                return Results.Ok<ChannelInfo[]>([channelInfo]);
             }).RequireAuthorization(Policies.RequireApiViewer);
 
             return app;
