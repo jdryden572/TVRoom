@@ -164,22 +164,7 @@ thread — but the competing writer is the Rx ingest subscriber running on the
 
 ---
 
-## 6. The stale tests encode an API that was removed on purpose
-
-**Severity:** Informational, but read before touching the tests
-
-`HlsStreamTests` calls `next.DisposeAllSegments()`, which does not exist —
-one of the compile errors in issue 1 of [known-issues.md](known-issues.md).
-`git log -S` shows `42905cd` removed it deliberately when `ScopedBufferPool` took
-over teardown.
-
-So the production code is right and **the tests need rewriting, not restoring**.
-Do not "fix" the build by adding the method back. `HlsSegmentList.Create` exists
-solely as a seam for those tests.
-
----
-
-## 7. Smaller items
+## 6. Smaller items
 
 **`TargetDuration` changes type mid-pipeline.** `HlsSegmentInfo.TargetDuration`
 is `int` but `HlsStreamWithSegments.TargetDuration` is `double`

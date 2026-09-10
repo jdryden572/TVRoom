@@ -5,46 +5,23 @@ Open items from the code review of 2026-09-01, minus the two that were fixed
 
 ---
 
-## 1. The test project does not compile, and nothing builds it
+## 1. Nothing builds or tests the solution
 
-**Severity:** High (process) · **Area:** `TVRoom.Tests/`
+**Severity:** Medium (process) · **Area:** `.github/workflows/`
 
-`dotnet test` fails to build. The main project is fine; only the tests are broken:
+The tests themselves were fixed in `be1ce5f` and now pass — 33 tests, green. What
+remains is that **no automated job runs them.** The only workflow in
+`.github/workflows/` deploys the cast receiver to GitHub Pages; nothing runs
+`dotnet build` or `dotnet test`.
 
-```
-TVRoom.Tests/HLS/HlsFileIngesterTests.cs(19,49):  error CS7036: no argument given for
-    required parameter 'bufferPool' of 'HlsFileIngester.HlsFileIngester(ScopedBufferPool)'
-TVRoom.Tests/HLS/SharedBufferTests.cs(13,67):     error CS7036: no argument given for
-    required parameter 'pool' of 'SharedBuffer.Create(ReadOnlySequence<byte>, ILogger, ScopedBufferPool)'
-TVRoom.Tests/HLS/HlsStreamTests.cs(107,18):       error CS1061: 'HlsStreamWithSegments' does not
-    contain a definition for 'DisposeAllSegments'
-TVRoom.Tests/HLS/HlsFileIngesterTests.cs(132,33): error CS7036: (same as above)
-TVRoom.Tests/HLS/HlsStreamTests.cs(213,33):       error CS7036: (same as above)
-```
+That gap is why the test project sat broken from November 2024 until September
+2026 without anyone noticing. Tests that nobody runs decay back to the same state.
 
-Commit `42905cd` (2024-11-11) introduced `ScopedBufferPool` and changed those
-signatures without updating callers in the test project. The only workflow in
-`.github/workflows/` deploys the cast receiver to GitHub Pages — nothing builds
-or tests the .NET solution, which is why this went unnoticed.
+**Fix:** add a workflow running `dotnet build` and `dotnet test` on push and PR.
 
-**Important:** do not fix this by re-adding `DisposeAllSegments`. `git log -S`
-confirms `42905cd` removed it deliberately when `ScopedBufferPool` took over
-teardown. The tests encode a superseded design and need rewriting against the
-current one. See issue 6 in [known-issues-hls.md](known-issues-hls.md).
-
-These tests cover the buffer-lifetime code, which is the subtlest part of the
-codebase and the subject of most of the HLS findings. Restoring them is a
-prerequisite for fixing those safely.
-
-**Fix:** update the three test files to the current API, then add a CI workflow
-that runs `dotnet build` and `dotnet test` on push and PR.
-
-**Sequencing:** do
-[enhancement-core-extraction.md](enhancement-core-extraction.md) *first*. It
-changes the very API these tests target — `GetSegment`/`GetPlaylist` stop
-returning `IResult`, and the ingester stops taking `HttpRequest` — so rewriting
-them against today's shape means rewriting them twice. It also makes the state
-machine testable without a web host, which is what these tests actually need.
+Consider also treating warnings as errors in CI, or at least surfacing them: the
+build currently emits a `Microsoft.CodeAnalysis.NetAnalyzers` version warning that
+would otherwise stay invisible.
 
 ---
 
@@ -72,9 +49,9 @@ Every direct dependency is pinned at `9.0.0` from November 2024.
 `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` and sits on the live
 path for data-protection key handling, so it is not a dormant reference.
 
-**Fix:** bump to the latest 9.0.x patches. Worth doing together with issue 1 so
-there is a test run to validate against. `Vite.AspNetCore` was already flagged as
-needing attention in `6379ada` and is still on 1.12.0.
+**Fix:** bump to the latest 9.0.x patches. There is now a passing test suite to
+validate against, so this is safer than it was. `Vite.AspNetCore` was already
+flagged as needing attention in `6379ada` and is still on 1.12.0.
 
 ---
 

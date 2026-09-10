@@ -104,8 +104,8 @@ but it means one more stream to pump and it does not reuse the ingest path.
    explicitly rather than relying on the default.
 2. Add a block parser: accumulate `key=value` lines until `progress=`, then emit
    one `TranscodeStats`. This is a cleaner parser than the current one and is
-   straightforward to unit test — note the existing tests do not currently
-   compile, see issue 1 in [known-issues.md](known-issues.md).
+   straightforward to unit test — `TranscodeStatsTests` already covers the
+   existing parser and passes, so extend it alongside.
 3. Route the progress stream into `TranscodeSession.Stats`.
 4. Decide whether to keep the current `TranscodeStats` shape. `q` is per-stream
    in progress output (`stream_0_0_q`), and `out_time_us` is available and more

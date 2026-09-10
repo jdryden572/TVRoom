@@ -67,6 +67,14 @@ these lists. Both changes are in the working tree and not yet committed:
   [known-issues-hls.md](known-issues-hls.md), which stays open for the
   mixed-terminator output itself.
 
+- **The test project did not compile**, broken since `42905cd` (November 2024)
+  when `ScopedBufferPool` changed `HlsFileIngester` and `SharedBuffer.Create`
+  without updating callers. Fixed in `be1ce5f`: 33 tests build and pass.
+  `DisposeAllSegments` was correctly **not** restored — it was removed
+  deliberately when the pool took over teardown — so the tests were rewritten
+  against the current design rather than the superseded one. What remains open is
+  that no CI job runs them; see issue 1 in [known-issues.md](known-issues.md).
+
 ## A note on severity labels
 
 Severities describe impact on this deployment: a single-tenant home server

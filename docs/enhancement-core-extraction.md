@@ -157,10 +157,19 @@ machine. See the trap below.
 
 ## Sequencing
 
-**Before the test rewrite.** Issue 1 in [known-issues.md](known-issues.md) calls
-for rewriting three test files that do not compile. Those tests target this API.
-Rewriting them against the current `IResult`-coupled shape and *then* decoupling
-means writing them twice.
+**The test rewrite already happened**, in `be1ce5f`, so the original advice to do
+this first is overtaken. That cuts both ways:
+
+- **Cost:** `HlsStreamTests` now exercises the `IResult` surface through a
+  `DefaultHttpContext` mock — three call sites plus a `CreateMockContext()`
+  helper. This work will touch them again. The touch-up is small and leaves the
+  tests *simpler*: `WriteMasterPlaylist(IBufferWriter<byte>)` can be asserted
+  against a plain buffer, with no mock HTTP context at all.
+- **Benefit, and it is the bigger one:** there is now a **passing 33-test suite to
+  refactor against**, which did not exist when this was written. The risk of doing
+  this unprotected is gone.
+
+On balance the change is easier now than it would have been before, not harder.
 
 **Before `TranscodeStats` becomes an agent contract.** Once a type crosses the
 agent wire it is versioned and its field names are frozen.
@@ -177,17 +186,16 @@ serialized to the browser, so it is a wire type in one direction already.
 
 The acceptance criterion is concrete: **a test can construct a
 `HlsStreamWithSegments`, push segments through it, and assert on the emitted
-playlist bytes — with no web host.** That is impossible today.
+playlist bytes — with no web host.** `HlsStreamTests` gets close today but needs a
+`DefaultHttpContext` mock to do it, which is exactly the coupling being removed.
 
 ## Risks
 
-- **There is no test safety net while doing this**, because the test project does
-  not compile. Two options: minimally fix the tests first for a net and accept
-  rewriting them, or do the refactor unprotected and write tests against the clean
-  API afterwards. The refactor is mechanical and compiler-checked, so the second is
-  reasonable — but verify manually against the running app that playlists and
-  segments still serve, since a playlist byte-level regression would not surface
-  as a compile error.
+- **Keep the existing tests green throughout.** They pass now, so any red is a
+  real regression rather than pre-existing damage — a much better position than
+  this task was originally written for. Byte-level playlist assertions are the
+  ones to watch, since a terminator or ordering change would not surface as a
+  compile error.
 - **It touches code with open defects.** Issue 1 converges with this work and
   should be fixed here. Issues 3 and 5 in the HLS list are in adjacent code but are
   separate changes — do not fold them in.
