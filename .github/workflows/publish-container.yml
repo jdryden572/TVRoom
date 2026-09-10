@@ -1,0 +1,79 @@
+# Builds the server container and publishes it to GitHub Container Registry.
+name: Publish container image
+
+on:
+  push:
+    # Every branch publishes an image. Only main gets :latest; other branches are
+    # tagged with the branch name (see the tags block below).
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # docker/metadata-action lowercases this, which GHCR requires.
+  IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Skip pull requests opened from a branch in this repo: the push trigger
+    # already built that exact commit. Fork PRs still run.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        # Skipped on pull requests: a fork's GITHUB_TOKEN cannot write packages,
+        # and nothing is pushed from a PR anyway.
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          # Includes org.opencontainers.image.source, which links the package to
+          # this repo on GHCR so it inherits the repo's visibility.
+          labels: ${{ steps.meta.outputs.labels }}
+          # The final stage installs the ASP.NET runtime over the ffmpeg image,
+          # which is slow and identical between runs. Cache it.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Avoids the "unknown/unknown" entry provenance attestations add to the
+          # GHCR package listing. Drop this if you later want attestations.
+          provenance: false

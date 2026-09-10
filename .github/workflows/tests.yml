@@ -1,0 +1,67 @@
+# Runs the test suite on every branch push.
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Building TVRoom.csproj runs the DebugEnsureNodeEnv target, which shells
+      # out to `npm install` whenever client/node_modules is absent - which it
+      # always is on a fresh checkout. So the test job needs Node even though it
+      # never touches the front end.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: TVRoom/client/package-lock.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore TVRoom.sln
+
+      - name: Build
+        run: dotnet build TVRoom.sln --configuration Debug --no-restore
+
+      - name: Test
+        run: >
+          dotnet test TVRoom.sln
+          --configuration Debug
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+
+      - name: Upload test results
+        # Runs even when the tests fail - that is when the .trx is most useful.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: TestResults/
+          if-no-files-found: warn

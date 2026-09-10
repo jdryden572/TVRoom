@@ -1,0 +1,25 @@
+# Build outputs — regenerated inside the image.
+# node_modules matters most: TVRoom.csproj only runs `npm install` when
+# client/node_modules is absent, so copying a host (Windows) node_modules in
+# skips the install and leaves platform-wrong esbuild/rollup binaries.
+**/bin/
+**/obj/
+**/node_modules/
+TVRoom/wwwroot/
+
+# Local state. Must never be baked into a published image.
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Not needed to build, and .git is most of the context size.
+.git/
+.github/
+.gitattributes
+.gitignore
+.vs/
+.vscode/
+docs/
+**/*.user
+Dockerfile
+.dockerignore

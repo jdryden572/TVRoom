@@ -1,32 +1,12 @@
 ﻿# Known issues — repo-wide
 
-Open items from the code review of 2026-09-01, minus the two that were fixed
+Open items from the code review of 2026-09-01, minus those already fixed
 (see [README.md](README.md)), plus anything found since. Ordered by how much they
 matter.
 
 ---
 
-## 1. Nothing builds or tests the solution
-
-**Severity:** Medium (process) · **Area:** `.github/workflows/`
-
-The tests themselves were fixed in `be1ce5f` and now pass — 33 tests, green. What
-remains is that **no automated job runs them.** The only workflow in
-`.github/workflows/` deploys the cast receiver to GitHub Pages; nothing runs
-`dotnet build` or `dotnet test`.
-
-That gap is why the test project sat broken from November 2024 until September
-2026 without anyone noticing. Tests that nobody runs decay back to the same state.
-
-**Fix:** add a workflow running `dotnet build` and `dotnet test` on push and PR.
-
-Consider also treating warnings as errors in CI. The build is currently clean —
-0 warnings, 0 errors — so a `-warnaserror` gate would hold today and would catch
-regressions like the `ASPDEPR005` deprecation that the .NET 10 upgrade surfaced.
-
----
-
-## 2. Forwarded headers are accepted from any client
+## 1. Forwarded headers are accepted from any client
 
 **Severity:** Medium-low · **Area:** [Program.cs:27-35](../TVRoom/Program.cs#L27-L35)
 
@@ -56,7 +36,7 @@ to its subnet), and set `AllowedHosts` to the real hostname.
 
 ---
 
-## 3. HLS ingest endpoints are anonymous and bound to every interface
+## 2. HLS ingest endpoints are anonymous and bound to every interface
 
 **Severity:** Low-medium · **Area:** [TranscodeApiEndpoints.cs:44](../TVRoom/Transcode/TranscodeApiEndpoints.cs#L44)
 
@@ -85,7 +65,7 @@ separate local-only listener or with a short middleware check on
 
 ---
 
-## 4. One high-severity npm advisory remains, pinned behind a Svelte 4 cascade
+## 3. One high-severity npm advisory remains, pinned behind a Svelte 4 cascade
 
 **Severity:** Low (dev-server only) · **Area:** [TVRoom/client/package.json](../TVRoom/client/package.json)
 
@@ -135,7 +115,7 @@ manual verification of the control panel, not just a green `npm run build`.
 
 ---
 
-## 5. Smaller items
+## 4. Smaller items
 
 **`IsInvalidFileName` is dead code.**
 [BroadcastApiEndpoints.cs:66](../TVRoom/Broadcast/BroadcastApiEndpoints.cs#L66)
@@ -149,6 +129,13 @@ Linux `Path.GetInvalidFileNameChars()` returns only `\0` and `/`, but rejecting
 guard and the later assignment are not atomic, so two concurrent start calls can
 both get past the check. Admin-only and unlikely in practice; the fix is a lock
 or an `Interlocked.CompareExchange`.
+
+**CI does not treat warnings as errors.** `tests.yml` runs `dotnet build`
+and `dotnet test` on every branch push, but neither passes `-warnaserror`,
+and neither does the `dotnet publish` in the container build. The build is
+currently clean — 0 warnings, 0 errors — so the gate would hold today, and it
+would catch regressions like the `ASPDEPR005` deprecation that the .NET 10
+upgrade surfaced.
 
 **Only `InvalidJwtException` is caught in `/signin`.** A transport failure while
 fetching Google certificates surfaces as an unhandled 500 rather than a clean

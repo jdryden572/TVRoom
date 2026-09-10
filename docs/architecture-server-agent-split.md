@@ -566,7 +566,7 @@ in memory.
 - **[enhancement-streaming-seam-types.md](enhancement-streaming-seam-types.md)** —
   `IAgentProxy` already returns `IAsyncEnumerable<T>`, which is the right seam
   type. Fix the `GetDebugOutput` regression noted there before that branch merges.
-- **[known-issues.md](known-issues.md) issue 3** — the ingest endpoints stay
+- **[known-issues.md](known-issues.md) issue 2** — the ingest endpoints stay
   loopback-only under this design, since the server-side remux writes to localhost.
   That rating only changes if the agent-ships-HLS option is ever revisited.
 - **`refactor-for-agents` branch** — `IAgentProxy` and `LocalAgent` already sketch

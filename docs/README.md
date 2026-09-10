@@ -73,8 +73,8 @@ the issue being closed.
   without updating callers. Fixed in `be1ce5f`: 33 tests build and pass.
   `DisposeAllSegments` was correctly **not** restored — it was removed
   deliberately when the pool took over teardown — so the tests were rewritten
-  against the current design rather than the superseded one. What remains open is
-  that no CI job runs them; see issue 1 in [known-issues.md](known-issues.md).
+  against the current design rather than the superseded one. They now run in CI
+  on every branch push — see the CI entry below.
 
 - **Stale dependencies and eight High-severity advisories.** Everything was
   pinned at `9.0.0` from November 2024. The app and tests now target **.NET 10**
@@ -120,7 +120,44 @@ the issue being closed.
   high that actually shipped to the browser, and carried `vite` 5.0.12 -> 5.4.21.
   Verified with `npm run build` and by booting the app and watching the Vite dev
   server start. The ninth high is `vite` itself, which cannot be patched without
-  migrating to Svelte 5 — tracked as issue 4 in
+  migrating to Svelte 5 — tracked as issue 3 in
+  [known-issues.md](known-issues.md).
+
+- **Nothing built or tested the solution in CI.** Two workflows now cover it:
+
+  - `tests.yml` runs `dotnet restore` / `build` / `test` on **every branch
+    push**, uploading the `.trx` as an artifact even on failure. It installs Node
+    because building `TVRoom.csproj` triggers the `DebugEnsureNodeEnv` target,
+    which shells out to `npm install` whenever `client/node_modules` is absent —
+    always true on a fresh checkout — even though the tests never touch the front
+    end. NuGet and npm caches are keyed so reruns stay fast.
+  - `publish-container.yml` builds the Docker image and publishes it to GHCR on
+    **every branch push** and on `v*` tags. Only `main` gets `:latest`; other
+    branches publish under their own name, sanitized by `docker/metadata-action`
+    (`feature/foo` becomes `feature-foo`), and every build additionally gets a
+    `sha-` tag. Fork pull requests build without publishing; pull requests from a
+    branch in this repo are skipped by a job-level `if`, because the push trigger
+    already built that commit. Auth is the default `GITHUB_TOKEN`; there is no
+    secret to configure.
+
+    Note that branch tags are **not** garbage-collected when a branch is deleted,
+    so GHCR will accumulate one image per feature branch. If that becomes
+    annoying, prune with `actions/delete-package-versions` on a schedule.
+
+  This also required adding a **`.dockerignore`**, which did not exist. `COPY . .`
+  was copying everything, and the consequential part was `client/node_modules`:
+  `DebugEnsureNodeEnv` is conditioned on that directory being *absent*, so a host
+  (Windows) `node_modules` copied into a Linux image silently **skips**
+  `npm install` and leaves platform-wrong esbuild/rollup binaries. It would also
+  have baked `tvroom.db` into a published image.
+
+  Verified that excluding `wwwroot` from the build context is safe: the Web SDK's
+  `Content Include="wwwroot/**"` glob is evaluated before any target runs, and
+  `wwwroot/` is gitignored, so a clean checkout could plausibly have published an
+  image with no JS or CSS. Deleting `wwwroot` and running `dotnet publish
+  -c Release` put all 11 assets in the output — .NET's static-web-assets pipeline
+  picks them up after `PublishBuildAssets` runs. What is still open is that
+  neither workflow passes `-warnaserror`; see issue 4 in
   [known-issues.md](known-issues.md).
 
 ## A note on severity labels
