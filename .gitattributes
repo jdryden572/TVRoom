@@ -1,0 +1,28 @@
+# Normalize every text file to LF, both in the repository and in the working tree.
+#
+# LF in the working tree is deliberate rather than the usual "native" default.
+# C# raw string literals inherit the line endings of their source file, and the
+# HLS playlist writers in TVRoom/HLS/HlsStreamState.cs use them - so a CRLF
+# checkout changes the bytes served to players. Forcing LF everywhere keeps a
+# Windows dev build and the Linux Docker build byte-identical.
+#
+# This also overrides core.autocrlf, which is inconsistent on at least one dev
+# machine (system=true, global=false) and previously produced whole-file diffs.
+* text=auto eol=lf
+
+# Binary files: never touch these, regardless of content sniffing.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.pdf  binary
+*.zip  binary
+*.db   binary
+*.dll  binary
+*.exe  binary
