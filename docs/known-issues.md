@@ -1,7 +1,8 @@
 ﻿# Known issues — repo-wide
 
 Open items from the code review of 2026-09-01, minus the two that were fixed
-(see [README.md](README.md)). Ordered by how much they matter.
+(see [README.md](README.md)), plus anything found since. Ordered by how much they
+matter.
 
 ---
 
@@ -84,7 +85,57 @@ separate local-only listener or with a short middleware check on
 
 ---
 
-## 4. Smaller items
+## 4. One high-severity npm advisory remains, pinned behind a Svelte 4 cascade
+
+**Severity:** Low (dev-server only) · **Area:** [TVRoom/client/package.json](../TVRoom/client/package.json)
+
+`npm audit` on `TVRoom/client` reported 17 vulnerabilities (9 high). Eight of the
+nine highs were cleared by `npm audit fix`, which touched **only
+`package-lock.json`** — every fix landed inside the existing semver ranges, so no
+declared dependency changed. That included `vite` 5.0.12 -> 5.4.21,
+`@xmldom/xmldom` (via `video.js` -> `mpd-parser`, the only high that shipped to
+the browser), plus `postcss`, `nanoid`, `rollup`, `picomatch`, `brace-expansion`,
+`minimatch`, and `ws`.
+
+**What is left:** `vite` itself. The advisory range is `<=6.4.2`, which covers
+*all* of vite 5.x, so the first patched release is 6.4.3 — and getting there
+forces a framework migration:
+
+| Package | Peer requirements |
+| --- | --- |
+| `@sveltejs/vite-plugin-svelte@3` (current) | vite ^5, svelte ^4 |
+| `@sveltejs/vite-plugin-svelte@5` | vite ^6, **svelte ^5** |
+| `@sveltejs/vite-plugin-svelte@7` | vite ^8, **svelte ^5.46** |
+
+There is no way to patch vite without moving to Svelte 5.
+
+**Why this is deferred rather than fixed:** 15 of the 16 vite advisories are
+**dev-server only** — `server.fs.deny` bypasses and `launch-editor` command
+injection. They require an attacker to reach the dev server on a developer's
+machine. The one advisory touching production output is a DOM-clobbering gadget
+in the modulepreload polyfill, which needs attacker-controlled HTML on the page;
+this app's HTML is server-rendered Razor from trusted content.
+
+**Fix, when it is worth doing:** the migration itself is small. All 17
+components (~1571 lines) use Svelte 4 syntax that Svelte 5 still runs in legacy
+mode. The genuine breakages are:
+
+- `new Component({ target })` in
+  [control-panel.ts:4](../TVRoom/client/src/control-panel.ts#L4) and
+  [users-config.ts:4](../TVRoom/client/src/users-config.ts#L4) — the class
+  component API is removed in Svelte 5; use `mount()`.
+- `TextArea.svelte` uses `afterUpdate`, `createEventDispatcher`, and `$$props`.
+  All are deprecated but still work in legacy mode, so they are a cleanup rather
+  than a blocker.
+- `svelte-check` must go to 4.x; 3.x does not understand Svelte 5.
+
+The risk is not the build — it is that Svelte 5 regressions surface at runtime,
+and this UI needs a live tuner and an active broadcast to exercise. Budget for
+manual verification of the control panel, not just a green `npm run build`.
+
+---
+
+## 5. Smaller items
 
 **`IsInvalidFileName` is dead code.**
 [BroadcastApiEndpoints.cs:66](../TVRoom/Broadcast/BroadcastApiEndpoints.cs#L66)

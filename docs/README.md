@@ -113,6 +113,16 @@ the issue being closed.
   [enhancement-ffmpeg-progress.md](enhancement-ffmpeg-progress.md), which should
   land first.
 
+- **Eight of nine high-severity npm advisories.** `npm audit fix` on
+  `TVRoom/client` cleared them by touching **only `package-lock.json`** — every
+  fix landed inside the existing semver ranges, so no declared dependency moved.
+  Notably this patched `@xmldom/xmldom` (via `video.js` -> `mpd-parser`), the one
+  high that actually shipped to the browser, and carried `vite` 5.0.12 -> 5.4.21.
+  Verified with `npm run build` and by booting the app and watching the Vite dev
+  server start. The ninth high is `vite` itself, which cannot be patched without
+  migrating to Svelte 5 — tracked as issue 4 in
+  [known-issues.md](known-issues.md).
+
 ## A note on severity labels
 
 Severities describe impact on this deployment: a single-tenant home server
