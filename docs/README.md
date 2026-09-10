@@ -87,7 +87,13 @@ the issue being closed.
     already set. This also cleared the version-mismatch warning.
   - `ForwardedHeadersOptions.KnownNetworks` is obsolete in .NET 10 (`ASPDEPR005`);
     switched to `KnownIPNetworks`.
-  - `Vite.AspNetCore` 1.12 -> 2.4.1 dropped the `.Extensions` sub-namespace.
+  - `Vite.AspNetCore` 1.12 -> 2.4.1 dropped the `.Extensions` sub-namespace, and
+    moved `PackageDirectory` / `PackageManager` from `Vite:*` onto `Vite:Server:*`.
+    Options binding ignores unmatched keys, so the stale `Vite:PackageDirectory`
+    in `appsettings.Development.json` failed **silently**: the dev server fell back
+    to the project directory, which has no `package.json`, and never launched. The
+    compiler caught the namespace half of this break; nothing caught the config
+    half. Verified fixed by running the app and watching Vite start on 5173.
   - MSTest 4 removed `[ExpectedException]`; those two tests now use
     `Assert.ThrowsExactly`.
   - Two tests in `HlsFileIngesterTests` subscribed to the hot `StreamSegments`
