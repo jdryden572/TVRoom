@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/microsoft-dotnet
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
 
 # install NPM, we need it to build the client app
@@ -23,7 +23,7 @@ RUN apt update
 RUN apt-get install -y software-properties-common
 RUN add-apt-repository -y ppa:dotnet/backports
 # Install aspnetcore runtime
-RUN apt-get install -y aspnetcore-runtime-9.0
+RUN apt-get install -y aspnetcore-runtime-10.0
 
 WORKDIR /app
 COPY --from=build /app ./

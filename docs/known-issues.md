@@ -1,4 +1,4 @@
-# Known issues — repo-wide
+﻿# Known issues — repo-wide
 
 Open items from the code review of 2026-09-01, minus the two that were fixed
 (see [README.md](README.md)). Ordered by how much they matter.
@@ -19,49 +19,19 @@ That gap is why the test project sat broken from November 2024 until September
 
 **Fix:** add a workflow running `dotnet build` and `dotnet test` on push and PR.
 
-Consider also treating warnings as errors in CI, or at least surfacing them: the
-build currently emits a `Microsoft.CodeAnalysis.NetAnalyzers` version warning that
-would otherwise stay invisible.
+Consider also treating warnings as errors in CI. The build is currently clean —
+0 warnings, 0 errors — so a `-warnaserror` gate would hold today and would catch
+regressions like the `ASPDEPR005` deprecation that the .NET 10 upgrade surfaced.
 
 ---
 
-## 2. Vulnerable transitive packages
-
-**Severity:** Medium · **Area:** `TVRoom/TVRoom.csproj`
-
-`dotnet list package --vulnerable --include-transitive` reports eight High
-advisories across both projects:
-
-```
-SQLitePCLRaw.lib.e_sqlite3        2.1.10   High   GHSA-2m69-gcr7-jv3q
-System.Security.Cryptography.Xml  9.0.0    High   GHSA-37gx-xxp4-5rgx
-                                                  GHSA-w3x6-4m5h-cxqf
-                                                  GHSA-cvvh-rhrc-wg4q
-                                                  GHSA-g8r8-53c2-pm3f
-                                                  GHSA-23rf-6693-g89p
-                                                  GHSA-8q5v-6pqq-x66h
-                                                  GHSA-mmjf-rqrv-855v
-                                                  GHSA-6588-8gv4-xfgh
-```
-
-Every direct dependency is pinned at `9.0.0` from November 2024.
-`System.Security.Cryptography.Xml` arrives via
-`Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` and sits on the live
-path for data-protection key handling, so it is not a dormant reference.
-
-**Fix:** bump to the latest 9.0.x patches. There is now a passing test suite to
-validate against, so this is safer than it was. `Vite.AspNetCore` was already
-flagged as needing attention in `6379ada` and is still on 1.12.0.
-
----
-
-## 3. Forwarded headers are accepted from any client
+## 2. Forwarded headers are accepted from any client
 
 **Severity:** Medium-low · **Area:** [Program.cs:27-35](../TVRoom/Program.cs#L27-L35)
 
 ```csharp
 options.KnownProxies.Clear();
-options.KnownNetworks.Clear();
+options.KnownIPNetworks.Clear();
 ```
 
 Clearing both disables the check on who is allowed to set `X-Forwarded-*`, so any
@@ -80,12 +50,12 @@ This is the documented-insecure configuration, and it is a common shortcut for
 containers behind a reverse proxy whose IP is not known ahead of time. It is only
 defensible while the app is unreachable except through that proxy.
 
-**Fix:** set `KnownProxies` to the reverse proxy address (or `KnownNetworks` to
-its subnet), and set `AllowedHosts` to the real hostname.
+**Fix:** set `KnownProxies` to the reverse proxy address (or `KnownIPNetworks`
+to its subnet), and set `AllowedHosts` to the real hostname.
 
 ---
 
-## 4. HLS ingest endpoints are anonymous and bound to every interface
+## 3. HLS ingest endpoints are anonymous and bound to every interface
 
 **Severity:** Low-medium · **Area:** [TranscodeApiEndpoints.cs:44](../TVRoom/Transcode/TranscodeApiEndpoints.cs#L44)
 
@@ -114,7 +84,7 @@ separate local-only listener or with a short middleware check on
 
 ---
 
-## 5. Smaller items
+## 4. Smaller items
 
 **`IsInvalidFileName` is dead code.**
 [BroadcastApiEndpoints.cs:66](../TVRoom/Broadcast/BroadcastApiEndpoints.cs#L66)

@@ -40,8 +40,9 @@ why, and any prerequisites.
 
 ## Already addressed
 
-Two findings from the first review were fixed and are deliberately absent from
-these lists. Both changes are in the working tree and not yet committed:
+Findings that have been fixed, and are therefore deliberately absent from the
+lists above. Kept as a record of what changed and why, so the reasoning survives
+the issue being closed.
 
 - **Google ID token audience was never validated.** `/signin` called
   `GoogleJsonWebSignature.ValidateAsync` without `ValidationSettings`, which
@@ -74,6 +75,37 @@ these lists. Both changes are in the working tree and not yet committed:
   deliberately when the pool took over teardown — so the tests were rewritten
   against the current design rather than the superseded one. What remains open is
   that no CI job runs them; see issue 1 in [known-issues.md](known-issues.md).
+
+- **Stale dependencies and eight High-severity advisories.** Everything was
+  pinned at `9.0.0` from November 2024. The app and tests now target **.NET 10**
+  and every package is at its latest stable version; `dotnet list package
+  --vulnerable --include-transitive` reports none, and `--outdated` is empty. This
+  closed what was issue 2 in [known-issues.md](known-issues.md). Notable pieces:
+
+  - `Microsoft.CodeAnalysis.NetAnalyzers` was **removed** rather than bumped - the
+    SDK ships its own analyzers, and `EnableNETAnalyzers` / `AnalysisLevel` were
+    already set. This also cleared the version-mismatch warning.
+  - `ForwardedHeadersOptions.KnownNetworks` is obsolete in .NET 10 (`ASPDEPR005`);
+    switched to `KnownIPNetworks`.
+  - `Vite.AspNetCore` 1.12 -> 2.4.1 dropped the `.Extensions` sub-namespace.
+  - MSTest 4 removed `[ExpectedException]`; those two tests now use
+    `Assert.ThrowsExactly`.
+  - Two tests in `HlsFileIngesterTests` subscribed to the hot `StreamSegments`
+    observable *after* ingesting, racing the consumer loop. .NET 10 scheduling made
+    the loop win consistently, turning a latent flake into a hard failure. Both now
+    subscribe up front. The race was pre-existing, not a .NET 10 defect.
+
+  **Behaviour change worth knowing:** cookie-auth challenges on *minimal API*
+  endpoints now return **401** instead of a 302 to `/login`. Razor Pages still
+  redirect, so the browser login flow is unchanged; only `fetch()` callers see the
+  difference, and 401 is the more correct answer there. Verified against a .NET 9
+  baseline.
+
+  **Deliberately not bumped:** the `lscr.io/linuxserver/ffmpeg:7.0.2` base image.
+  `TranscodeStats.TryParse` scrapes ffmpeg stderr, so a version change risks a
+  silent telemetry break - see
+  [enhancement-ffmpeg-progress.md](enhancement-ffmpeg-progress.md), which should
+  land first.
 
 ## A note on severity labels
 

@@ -44,22 +44,20 @@ namespace TVRoom.Tests.HLS
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ObjectDisposedException))]
         public void Rent_ThrowsIfDisposed()
         {
             var buffer = CreateSharedBuffer();
             buffer.Dispose();
-            buffer.Rent();
+            Assert.ThrowsExactly<ObjectDisposedException>(() => buffer.Rent());
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ObjectDisposedException))]
         public void Lease_ThrowsIfDisposed()
         {
             using var buffer = CreateSharedBuffer();
             var lease = buffer.Rent();
             lease.Dispose();
-            lease.GetSpan();
+            Assert.ThrowsExactly<ObjectDisposedException>(() => _ = lease.GetSpan().Length);
         }
 
         [TestMethod]

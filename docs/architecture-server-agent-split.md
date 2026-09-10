@@ -315,9 +315,9 @@ valuable.
 - **A UDP port range** must be opened, sized to concurrent broadcasts.
 - **libsrt becomes internet-facing.** A C library parsing untrusted handshakes on
   a public socket, live whenever a broadcast is running. Track its version the way
-  you would any internet-facing dependency — relevant given the base image is
-  pinned at `ffmpeg:7.0.2` and packages are otherwise stale (issue 2 in
-  [known-issues.md](known-issues.md)).
+  you would any internet-facing dependency. NuGet packages are current as of the
+  .NET 10 upgrade, but the base image is still pinned at `ffmpeg:7.0.2` — see
+  *Already addressed* in [README.md](README.md) for why that pin was left alone.
 
 ---
 
@@ -566,7 +566,7 @@ in memory.
 - **[enhancement-streaming-seam-types.md](enhancement-streaming-seam-types.md)** —
   `IAgentProxy` already returns `IAsyncEnumerable<T>`, which is the right seam
   type. Fix the `GetDebugOutput` regression noted there before that branch merges.
-- **[known-issues.md](known-issues.md) issue 4** — the ingest endpoints stay
+- **[known-issues.md](known-issues.md) issue 3** — the ingest endpoints stay
   loopback-only under this design, since the server-side remux writes to localhost.
   That rating only changes if the agent-ships-HLS option is ever revisited.
 - **`refactor-for-agents` branch** — `IAgentProxy` and `LocalAgent` already sketch

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using TVRoom.HLS;
 
 namespace TVRoom.Tests.HLS
@@ -41,6 +42,14 @@ namespace TVRoom.Tests.HLS
             var segments = new List<HlsSegmentInfo>();
             _fileIngester.StreamSegments.Subscribe(segments.Add);
 
+            // StreamSegments is hot (Publish + Connect, no replay), and ingestion is
+            // processed asynchronously off a channel. Subscribe up front: subscribing
+            // after the ingest races the consumer loop and misses the emission.
+            var firstSegmentTask = _fileIngester.StreamSegments
+                .Timeout(TimeSpan.FromSeconds(5))
+                .FirstAsync()
+                .ToTask();
+
             var master = new IngestMasterPlaylist(GetPayload(_validMasterPlaylist));
             await _fileIngester.IngestStreamFileAsync(master);
 
@@ -57,9 +66,7 @@ namespace TVRoom.Tests.HLS
 
             var firstSegment = new IngestStreamSegment("live0.ts", GetPayload("SomePayload!"u8));
             await _fileIngester.IngestStreamFileAsync(firstSegment);
-            var segment = await _fileIngester.StreamSegments
-                .Timeout(TimeSpan.FromSeconds(1))
-                .FirstAsync();
+            var segment = await firstSegmentTask;
 
             Assert.AreEqual(1, segments.Count);
             Assert.AreEqual("BANDWIDTH=6740800,RESOLUTION=1280x720,CODECS=\"avc1.4d002a,mp4a.40.2\"", segment.StreamInfo);
@@ -78,6 +85,11 @@ namespace TVRoom.Tests.HLS
         {
             var segments = new List<HlsSegmentInfo>();
             _fileIngester.StreamSegments.Subscribe(segments.Add);
+
+            var firstSegmentTask = _fileIngester.StreamSegments
+                .Timeout(TimeSpan.FromSeconds(5))
+                .FirstAsync()
+                .ToTask();
 
             var master = new IngestMasterPlaylist(GetPayload(_validMasterPlaylist));
             await _fileIngester.IngestStreamFileAsync(master);
@@ -100,9 +112,7 @@ namespace TVRoom.Tests.HLS
                 """u8));
             await _fileIngester.IngestStreamFileAsync(firstPlaylist);
 
-            var segment = await _fileIngester.StreamSegments
-                .Timeout(TimeSpan.FromSeconds(1))
-                .FirstAsync();
+            var segment = await firstSegmentTask;
 
             Assert.IsTrue(firstSegment.Payload.IsBufferDisposed);
             Assert.IsFalse(secondSegment.Payload.IsBufferDisposed);

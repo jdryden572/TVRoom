@@ -75,7 +75,7 @@ Two options; the first fits the existing architecture better.
 `HlsIngestBaseAddress`), and `TranscodeSessionManager` already routes by
 `transcodeId`. Add `-progress {base}/{id}/progress` and a matching endpoint that
 parses blocks into `TranscodeStats`. Reuses the routing, the session lookup, and
-the loopback restriction described in issue 4 of
+the loopback restriction described in issue 3 of
 [known-issues.md](known-issues.md).
 
 **b. A pipe.** `-progress pipe:1` writes to stdout, which is currently unused —

@@ -5,7 +5,7 @@ using TVRoom.Persistence;
 using TVRoom.Tuner;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using Vite.AspNetCore.Extensions;
+using Vite.AspNetCore;
 using TVRoom.Transcode;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,7 +31,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
         ForwardedHeaders.XForwardedProto |
         ForwardedHeaders.XForwardedHost;
     options.KnownProxies.Clear();
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
 });
 
 builder.Services.AddTransient(p => p.GetRequiredService<ILoggerFactory>().CreateLogger("EndpointLogger"));
