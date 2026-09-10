@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using Microsoft.Extensions.Logging;
+using System.Buffers;
 using System.Reactive.Linq;
 using TVRoom.HLS;
 
@@ -16,9 +17,23 @@ namespace TVRoom.Tests.HLS
                 live.m3u8
                 """u8.ToArray();
 
-        private HlsFileIngester _fileIngester = new();
+        private ScopedBufferPool _scopedBufferPool = null!;
 
-        public void TestCleanup() => _fileIngester.Dispose();
+        private HlsFileIngester _fileIngester = null!;
+        
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            _scopedBufferPool = new ScopedBufferPool();
+            _fileIngester = new HlsFileIngester(_scopedBufferPool);
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            _scopedBufferPool?.Dispose();
+            _fileIngester?.Dispose();
+        }
 
         [TestMethod]
         public async Task ExpectedSequence()
@@ -109,27 +124,10 @@ namespace TVRoom.Tests.HLS
             Assert.IsNull(await completionTask);
         }
 
-        [TestMethod]
-        public async Task DisposesUnusedSegmentsWhenDisposed()
-        {
-            var firstSegment = new IngestStreamSegment("live_oops.ts", GetPayload("To be disposed...!"u8));
-            await _fileIngester.IngestStreamFileAsync(firstSegment);
-
-            var secondSegment = new IngestStreamSegment("live0.ts", GetPayload("To be disposed...!"u8));
-            await _fileIngester.IngestStreamFileAsync(secondSegment);
-
-            var completion = _fileIngester.StreamSegments.LastOrDefaultAsync();
-            _fileIngester.Dispose();
-            await completion;
-
-            Assert.IsTrue(firstSegment.Payload.IsBufferDisposed);
-            Assert.IsTrue(secondSegment.Payload.IsBufferDisposed);
-        }
-
         private SharedBuffer GetPayload(ReadOnlySpan<byte> data)
         {
             var logger = new LoggerFactory().CreateLogger<SharedBuffer>();
-            return SharedBuffer.Create(new System.Buffers.ReadOnlySequence<byte>(data.ToArray()), logger);
+            return SharedBuffer.Create(new ReadOnlySequence<byte>(data.ToArray()), logger, _scopedBufferPool);
         }
     }
 

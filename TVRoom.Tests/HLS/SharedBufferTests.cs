@@ -10,7 +10,21 @@ namespace TVRoom.Tests.HLS
         private static ILogger _logger = new LoggerFactory().CreateLogger<SharedBuffer>();
         private static readonly byte[] _testData = "SomeData"u8.ToArray();
 
-        private SharedBuffer CreateSharedBuffer() => SharedBuffer.Create(new ReadOnlySequence<byte>(_testData), logger: _logger);
+        private ScopedBufferPool _scopedBufferPool = null!;
+
+        private SharedBuffer CreateSharedBuffer() => SharedBuffer.Create(new ReadOnlySequence<byte>(_testData), logger: _logger, _scopedBufferPool);
+
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            _scopedBufferPool = new ScopedBufferPool();
+        }
+        
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            _scopedBufferPool.Dispose();
+        }
 
         [TestMethod]
         public void Lease_ReturnsSpan()

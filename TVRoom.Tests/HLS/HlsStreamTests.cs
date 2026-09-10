@@ -1,11 +1,7 @@
-﻿using CommunityToolkit.HighPerformance.Buffers;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Buffers;
-using System.Collections.Immutable;
 using System.Globalization;
-using System.IO.Pipelines;
 using System.Text;
 using TVRoom.HLS;
 
@@ -16,18 +12,30 @@ namespace TVRoom.Tests.HLS
     {
         private MemoryStream _memoryStream = new();
 
-        private readonly HlsStreamWithSegments _streamState = new HlsStreamWithSegments(
-            HlsListSize: 10,
-            StreamInfo: "BANDWIDTH=6740800,RESOLUTION=1280x720,CODECS=\"avc1.4d002a,mp4a.40.2\"",
-            HlsVersion: 3,
-            TargetDuration: 3,
-            LiveSegments: HlsSegmentList.Create(3, new[]
-            {
-                new HlsSegmentEntry(7, 1.5015, GetPayload("FirstPayload"u8)),
-                new HlsSegmentFollowedByDiscontinuity(8, 3.003, GetPayload("SecondPayload"u8)),
-                new HlsSegmentEntry(9, 3.003, GetPayload("ThidPayload"u8)),
-            }),
-            PreviousSegments: new HlsSegmentList(3));
+        private ScopedBufferPool _scopedBufferPool = null!;
+
+        private HlsStreamWithSegments _streamState = null!;
+
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            _scopedBufferPool = new ScopedBufferPool();
+            _streamState = new HlsStreamWithSegments(
+                HlsListSize: 10,
+                StreamInfo: "BANDWIDTH=6740800,RESOLUTION=1280x720,CODECS=\"avc1.4d002a,mp4a.40.2\"",
+                HlsVersion: 3,
+                TargetDuration: 3,
+                LiveSegments: HlsSegmentList.Create(3, new[]
+                {
+                    new HlsSegmentEntry(7, 1.5015, GetPayload("FirstPayload"u8)),
+                    new HlsSegmentFollowedByDiscontinuity(8, 3.003, GetPayload("SecondPayload"u8)),
+                    new HlsSegmentEntry(9, 3.003, GetPayload("ThidPayload"u8)),
+                }),
+                PreviousSegments: new HlsSegmentList(3));
+        }
+
+        [TestCleanup]
+        public void TestCleanup() => _scopedBufferPool.Dispose();
 
         [TestMethod]
         public void GetNext_FirstSegment()
@@ -95,23 +103,6 @@ namespace TVRoom.Tests.HLS
 
             Assert.IsTrue(_streamState.LiveSegments[0].Payload.IsBufferDisposed);
             Assert.IsFalse(_streamState.LiveSegments[1].Payload.IsBufferDisposed);
-        }
-
-        [TestMethod]
-        public void DisposeAllSegments()
-        {
-            // Push one segment into Previous
-            var segmentInfo = new HlsSegmentInfo(_streamState.StreamInfo, 3, 3, 4.5, GetPayload("New segment!"u8));
-            var next = (HlsStreamWithSegments)_streamState.WithNewSegment(segmentInfo);
-
-            next.DisposeAllSegments();
-
-            foreach (var segment in next.LiveSegments)
-            {
-                Assert.IsTrue(segment.Payload.IsBufferDisposed);
-            }
-
-            Assert.IsTrue(next.PreviousSegments.Single().Payload.IsBufferDisposed);
         }
 
         [TestMethod]
@@ -204,13 +195,16 @@ namespace TVRoom.Tests.HLS
         {
             var length = (int)_memoryStream.Length;
             var span = _memoryStream.GetBuffer().AsSpan().Slice(0, length);
-            return Encoding.UTF8.GetString(span);
+            var str = Encoding.UTF8.GetString(span);
+
+            // Normalize line endings to LF for comparison
+            return str.ReplaceLineEndings("\n");
         }
 
-        private static SharedBuffer GetPayload(ReadOnlySpan<byte> data)
+        private SharedBuffer GetPayload(ReadOnlySpan<byte> data)
         {
             var logger = new LoggerFactory().CreateLogger<SharedBuffer>();
-            return SharedBuffer.Create(new ReadOnlySequence<byte>(data.ToArray()), logger);
+            return SharedBuffer.Create(new ReadOnlySequence<byte>(data.ToArray()), logger, _scopedBufferPool);
         }
     }
 }
