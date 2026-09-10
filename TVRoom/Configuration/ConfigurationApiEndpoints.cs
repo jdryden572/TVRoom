@@ -1,4 +1,6 @@
-﻿namespace TVRoom.Configuration
+﻿using TVRoom.Authorization;
+
+namespace TVRoom.Configuration
 {
     public static class ConfigurationApiEndpoints
     {
@@ -17,12 +19,12 @@
             {
                 await service.SaveNewConfig(config);
                 return Results.Ok();
-            });
+            }).RequireAuthorization(Policies.RequireAdministrator);
 
             app.MapGet("/transcodeConfig", async (TranscodeConfigService service) =>
             {
                 return await service.GetLatestConfig();
-            });
+            }).RequireAuthorization(Policies.RequireAdministrator);
 
             return app;
         }
